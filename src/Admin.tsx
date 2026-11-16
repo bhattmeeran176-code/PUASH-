@@ -82,7 +82,7 @@ export default function Admin() {
     event.preventDefault(); setAuthBusy(true); setMessage('');
     const result = authMode === 'login'
       ? await supabase.auth.signInWithPassword({ email: email.trim(), password })
-      : await supabase.auth.signUp({ email: email.trim(), password });
+      : await supabase.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: 'https://puash.pages.dev/admin' } });
     setAuthBusy(false);
     if (result.error) setMessage(result.error.message);
     else if (authMode === 'signup' && !result.data.session) setMessage('Account request create ho gayi. Email confirmation complete karke sign in karein.');
