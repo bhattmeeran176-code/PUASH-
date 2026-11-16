@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { ArrowLeft, CheckCircle2, Minus, Plus, ShoppingBag, Truck, Star, MessageSquare, UserRound } from 'lucide-react';
 import { supabase } from './supabase';
 
@@ -100,7 +100,7 @@ export default function ProductDetail() {
     }
   };
 
-  const submitReview = async (event: React.FormEvent<HTMLFormElement>) => {
+  const submitReview = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!userId || !canReview || reviewBusy) return;
     setReviewBusy(true); setReviewError(''); setReviewMessage('');
