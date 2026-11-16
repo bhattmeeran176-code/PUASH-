@@ -203,7 +203,7 @@ export default function Admin() {
     acc[key].revenue += Number(item.unit_price || 0) * Number(item.quantity || 0);
     return acc;
   }, {})).sort((a,b) => b.quantity - a.quantity).slice(0,5);
-  const lowStockProducts = products.filter(product => product.stock_quantity <= 5).sort((a,b) => a.stock_quantity - b.stock_quantity);
+  const lowStockProducts = products.filter(product => product.is_active && product.stock_quantity <= 5).sort((a,b) => a.stock_quantity - b.stock_quantity);
 
   if (!sessionReady) return <div className="admin-screen"><div className="admin-loading">PUASH Admin load ho raha hai…</div></div>;
 
