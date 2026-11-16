@@ -15,6 +15,7 @@ type CustomerOrder = {
   tracking_number: string | null;
   shipped_at: string | null;
   delivered_at: string | null;
+  order_return_requests?: { id: string; reason: string; details: string | null; status: string; admin_note: string | null; requested_at: string }[];
   order_items: { id: string; product_name: string; unit_price: number; quantity: number }[];
 };
 
@@ -58,6 +59,8 @@ export default function Account() {
   const [ordersBusy, setOrdersBusy] = useState(false);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [statusNotification, setStatusNotification] = useState('');
+  const [returnDrafts, setReturnDrafts] = useState<Record<string,{reason:string;details:string}>>({});
+  const [returnBusy, setReturnBusy] = useState<string|null>(null);
   const [addressForm, setAddressForm] = useState(blankAddress);
   const [editingAddress, setEditingAddress] = useState<string | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
@@ -76,7 +79,7 @@ export default function Account() {
       const [{ data, error: profileError }, { data: addressData, error: addressError }, { data: orderData, error: orderError }, { data: wishlistData, error: wishlistError }] = await Promise.all([
         supabase.from('profiles').select('full_name').eq('id', current.id).maybeSingle(),
         supabase.from('customer_addresses').select('*').eq('user_id', current.id).order('is_default', { ascending: false }).order('created_at', { ascending: false }),
-        supabase.from('orders').select('id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,created_at,courier_name,tracking_number,shipped_at,delivered_at,order_items(id,product_name,unit_price,quantity)').eq('user_id', current.id).order('created_at', { ascending: false }).limit(30),
+        supabase.from('orders').select('id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,created_at,courier_name,tracking_number,shipped_at,delivered_at,order_items(id,product_name,unit_price,quantity),order_return_requests(id,reason,details,status,admin_note,requested_at)').eq('user_id', current.id).order('created_at', { ascending: false }).limit(30),
         supabase.from('wishlists').select('id,product_id,products(id,name,price,image_url,stock_quantity,is_active)').eq('user_id', current.id).order('created_at', { ascending: false }),
       ]);
       if (profileError) setError('Profile load nahi hua: ' + profileError.message);
@@ -143,6 +146,27 @@ export default function Account() {
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [user?.id]);
+
+  const submitReturnRequest = async (order: CustomerOrder) => {
+    if (!user || order.status !== 'delivered' || order.order_return_requests?.length) return;
+    const draft = returnDrafts[order.id] || { reason: 'damaged', details: '' };
+    setReturnBusy(order.id); setError(''); setMessage('');
+    const { error: requestError } = await supabase.from('order_return_requests').insert({
+      order_id: order.id, user_id: user.id, reason: draft.reason, details: draft.details.trim() || null,
+    });
+    setReturnBusy(null);
+    if (requestError) setError('Return request submit nahi hui: ' + requestError.message);
+    else {
+      setMessage('Return request submit ho gayi. PUASH team review karegi.');
+      const { data, error: reloadError } = await supabase.from('orders')
+        .select('id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,created_at,courier_name,tracking_number,shipped_at,delivered_at,order_items(id,product_name,unit_price,quantity),order_return_requests(id,reason,details,status,admin_note,requested_at)'')
+        .eq('id', order.id).eq('user_id', user.id).single();
+      if (!reloadError && data) {
+        ordersRef.current = ordersRef.current.map(item => item.id === order.id ? data as CustomerOrder : item);
+        setOrders(ordersRef.current);
+      }
+    }
+  };
 
   const authenticate = async (event: FormEvent) => {
     event.preventDefault(); setBusy(true); setError(''); setMessage('');
@@ -333,6 +357,20 @@ export default function Account() {
                   {order.delivered_at && <div><span>Delivered on</span><b>{new Date(order.delivered_at).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'})}</b></div>}
                   <small>Courier ki live location tracking abhi available nahi hai. Tracking number ko courier ki official website par check karein.</small>
                 </div> : null}
+                {order.status==='delivered' && <div className="customer-return-panel">
+                  <strong>Return / refund request</strong>
+                  {(order.order_return_requests || []).length > 0 ? <div className="customer-return-status">
+                    <span>Request status: <b>{order.order_return_requests![0].status.replaceAll('_',' ')}</b></span>
+                    <small>{order.order_return_requests![0].admin_note ? 'PUASH update: '+order.order_return_requests![0].admin_note : 'Your request is being reviewed by PUASH.'}</small>
+                  </div> : <>
+                    <p>If there is a problem with your delivered order, submit a return request for review.</p>
+                    <select value={returnDrafts[order.id]?.reason || 'damaged'} onChange={e=>setReturnDrafts(prev=>({...prev,[order.id]:{reason:e.target.value,details:prev[order.id]?.details||''}}))}>
+                      <option value="damaged">Item arrived damaged</option><option value="wrong_item">Wrong item received</option><option value="missing_item">Item missing</option><option value="not_as_described">Item not as described</option><option value="other">Other issue</option>
+                    </select>
+                    <textarea maxLength={1500} value={returnDrafts[order.id]?.details||''} onChange={e=>setReturnDrafts(prev=>({...prev,[order.id]:{reason:prev[order.id]?.reason||'damaged',details:e.target.value}}))} placeholder="Describe the issue (optional)"/>
+                    <button type="button" disabled={returnBusy===order.id} onClick={()=>submitReturnRequest(order)}>{returnBusy===order.id?'Submitting…':'Submit return request'}</button>
+                  </>}
+                </div>}
                 <p className="customer-order-destination">Delivering to: {[order.shipping_address?.full_name,order.shipping_address?.city,order.shipping_address?.postal_code].filter(Boolean).join(' · ')}</p>
                 <button type="button" className="customer-order-details-toggle" aria-expanded={expandedOrderId===order.id} onClick={()=>setExpandedOrderId(expandedOrderId===order.id?null:order.id)}>
                   {expandedOrderId===order.id ? 'Hide order details' : 'View order details'}
