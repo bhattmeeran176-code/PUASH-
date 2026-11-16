@@ -496,7 +496,7 @@ function App() {
                       <div className="product-category">{product.category}</div>
                       <button
                         className="product-name"
-                        onClick={() => setSelected(product)}
+                        onClick={() => { window.location.href = '/product/' + product.id; }}
                       >
                         {product.name}
                       </button>
