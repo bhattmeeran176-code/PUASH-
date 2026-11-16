@@ -1,9 +1,9 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { supabase } from './supabase';
-import { ArrowLeft, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X } from 'lucide-react';
+import { ArrowLeft, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X } from 'lucide-react';
 
 type Category = { id: string; name: string };
-type Product = {
+type OrderItem = { id: string; product_name: string; unit_price: number; quantity: number };\ntype Order = { id: string; user_id: string; status: string; total_amount: number; shipping_address: any; customer_note: string | null; created_at: string; order_items: OrderItem[] };\ntype Product = {
   id: string; name: string; slug: string; description: string | null;
   price: number; compare_at_price: number | null; image_url: string | null;
   stock_quantity: number; is_active: boolean; category_id: string | null;
@@ -24,7 +24,7 @@ export default function Admin() {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);\n  const [orders, setOrders] = useState<Order[]>([]);\n  const [activeTab, setActiveTab] = useState<'products' | 'orders'>('products');\n  const [orderBusy, setOrderBusy] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -70,7 +70,23 @@ export default function Admin() {
     setBusy(false);
   };
 
-  useEffect(() => { if (isAdmin) loadData(); }, [isAdmin]);
+  const loadOrders = async () => {
+    const { data, error } = await supabase.from('orders')
+      .select('id,user_id,status,total_amount,shipping_address,customer_note,created_at,order_items(id,product_name,unit_price,quantity)')
+      .order('created_at', { ascending: false });
+    if (error) setMessage('Orders load nahi hue: ' + error.message);
+    else setOrders((data || []) as Order[]);
+  };
+
+  const updateOrderStatus = async (orderId: string, status: string) => {
+    setOrderBusy(orderId); setMessage('');
+    const { error } = await supabase.from('orders').update({ status, updated_at: new Date().toISOString() }).eq('id', orderId);
+    setOrderBusy(null);
+    if (error) setMessage('Order status update nahi hua: ' + error.message);
+    else { setMessage('Order status update ho gaya.'); await loadOrders(); }
+  };
+
+  useEffect(() => { if (isAdmin) { loadData(); loadOrders(); } }, [isAdmin]);
 
   const resetForm = () => {
     setEditing(null); setName(''); setDescription(''); setPrice('');
@@ -155,9 +171,11 @@ export default function Admin() {
   return <div className="admin-screen">
     <header className="admin-header"><a href="/" className="admin-brand"><span>PUASH.</span><small>ADMIN</small></a><button className="admin-logout" onClick={()=>supabase.auth.signOut()}><LogOut size={16}/> Sign out</button></header>
     <main className="admin-main">
-      <div className="admin-title-row"><div><div className="admin-kicker">STORE CONTROL</div><h1>Products</h1><p>Add, edit and publish products on your PUASH store.</p></div><button className="admin-refresh" onClick={loadData}><RefreshCw size={16}/> Refresh</button></div>
+      <div className="admin-title-row"><div><div className="admin-kicker">STORE CONTROL</div><h1>{activeTab === 'products' ? 'Products' : 'Orders'}</h1><p>{activeTab === 'products' ? 'Add, edit and publish products on your PUASH store.' : 'Review customer orders and update their fulfilment status.'}</p></div><button className="admin-refresh" onClick={() => activeTab === 'products' ? loadData() : loadOrders()}><RefreshCw size={16}/> Refresh</button></div>
+      <nav className="admin-tabs"><button className={activeTab === 'products' ? 'active' : ''} onClick={() => setActiveTab('products')}><Package size={16}/> Products <span>{products.length}</span></button><button className={activeTab === 'orders' ? 'active' : ''} onClick={() => setActiveTab('orders')}><ClipboardList size={16}/> Orders <span>{orders.length}</span></button></nav>
       {message && <div className="admin-message">{message}<button onClick={()=>setMessage('')}><X size={14}/></button></div>}
-      <section className="admin-panel">
+      {activeTab === 'products' ? <>
+<section className="admin-panel">
         <div className="admin-panel-heading"><div><span className="admin-panel-icon"><Package size={17}/></span><strong>{editing ? 'Edit product' : 'Add a product'}</strong></div>{editing && <button className="admin-link" onClick={resetForm}>Cancel edit</button>}</div>
         <form className="admin-form admin-product-form" onSubmit={saveProduct}>
           <label>Product name<input value={name} onChange={e=>setName(e.target.value)} required placeholder="e.g. Pashmina stole"/></label>
@@ -182,6 +200,19 @@ export default function Admin() {
             <div className="admin-row-actions"><button onClick={()=>editProduct(p)}>Edit</button><button onClick={()=>toggleActive(p)}>{p.is_active ? 'Hide' : 'Publish'}</button></div>
           </article>)}</div>}
       </section>
-    </main>
+    
+      </> : <section className="admin-panel">
+        <div className="admin-panel-heading"><div><span className="admin-panel-icon"><ClipboardList size={17}/></span><strong>Customer orders <small>({orders.length})</small></strong></div><button className="admin-link" onClick={loadOrders}>Refresh list</button></div>
+        {orders.length === 0 ? <div className="admin-empty">Abhi koi real customer order nahi hai. Jab customer checkout karega, orders yahan dikhne lagenge.</div> : <div className="admin-order-list">{orders.map(order => {
+          const address = order.shipping_address || {};
+          return <article className="admin-order-card" key={order.id}>
+            <div className="admin-order-top"><div><strong>Order #{order.id.slice(0, 8).toUpperCase()}</strong><small>{new Date(order.created_at).toLocaleString('en-IN')}</small></div><strong>{money(Number(order.total_amount))}</strong></div>
+            <div className="admin-order-address"><strong>{address.full_name || 'Customer'}</strong><span>{[address.phone,address.line1,address.line2,address.city,address.state,address.postal_code].filter(Boolean).join(', ') || 'No delivery address saved'}</span></div>
+            <div className="admin-order-items">{(order.order_items || []).map(item => <div key={item.id}><span>{item.product_name} × {item.quantity}</span><strong>{money(Number(item.unit_price) * item.quantity)}</strong></div>)}</div>
+            {order.customer_note && <p className="admin-order-note">Note: {order.customer_note}</p>}
+            <div className="admin-order-actions"><span className={'admin-status ' + (order.status === 'delivered' ? 'live' : '')}>{order.status}</span><select value={order.status} disabled={orderBusy === order.id} onChange={e => updateOrderStatus(order.id,e.target.value)} aria-label="Update order status">{['pending','confirmed','processing','shipped','delivered','cancelled'].map(status => <option key={status} value={status}>{status.charAt(0).toUpperCase()+status.slice(1)}</option>)}</select>{orderBusy === order.id && <small>Saving…</small>}</div>
+          </article>;
+        })}</div>}
+      </section>}</main>
   </div>;
 }
