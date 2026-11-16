@@ -6,6 +6,7 @@ PUASH is a mobile-first shopping marketplace prototype inspired by Kashmir.
 - React + Vite + TypeScript frontend
 - Supabase client connection
 - Live product and category reads from Supabase
+- Customer account with private delivery address book (add, edit, delete, default address)
 - Sample catalogue fallback while the live product catalogue is empty
 - Product search, sorting, and detail view
 - Client-side cart with quantity controls
