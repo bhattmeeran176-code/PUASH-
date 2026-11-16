@@ -4,7 +4,8 @@ import App from './App';
 import Admin from './Admin';
 import './index.css';
 
-const Page = window.location.pathname === '/admin' ? Admin : App;
+const currentPath = window.location.pathname;
+const Page = currentPath === '/admin' || currentPath.startsWith('/admin%') || currentPath.startsWith('/admin/') ? Admin : App;
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
