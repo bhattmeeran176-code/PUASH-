@@ -3,7 +3,9 @@ import { supabase } from './supabase';
 import { ArrowLeft, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X } from 'lucide-react';
 
 type Category = { id: string; name: string };
-type OrderItem = { id: string; product_name: string; unit_price: number; quantity: number };\ntype Order = { id: string; user_id: string; status: string; total_amount: number; shipping_address: any; customer_note: string | null; created_at: string; order_items: OrderItem[] };\ntype Product = {
+type OrderItem = { id: string; product_name: string; unit_price: number; quantity: number };
+type Order = { id: string; user_id: string; status: string; total_amount: number; shipping_address: any; customer_note: string | null; created_at: string; order_items: OrderItem[] };
+type Product = {
   id: string; name: string; slug: string; description: string | null;
   price: number; compare_at_price: number | null; image_url: string | null;
   stock_quantity: number; is_active: boolean; category_id: string | null;
@@ -24,7 +26,10 @@ export default function Admin() {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);\n  const [orders, setOrders] = useState<Order[]>([]);\n  const [activeTab, setActiveTab] = useState<'products' | 'orders'>('products');\n  const [orderBusy, setOrderBusy] = useState<string | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [activeTab, setActiveTab] = useState<'products' | 'orders'>('products');
+  const [orderBusy, setOrderBusy] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
