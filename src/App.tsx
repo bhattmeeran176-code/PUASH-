@@ -37,6 +37,7 @@ type Product = {
   tag?: string;
   description: string;
   imageUrl?: string | null;
+  stock: number;
 };
 
 const sampleCategories = [
@@ -83,7 +84,7 @@ function App() {
       const [productResult, categoryResult] = await Promise.all([
         supabase
           .from('products')
-          .select('id,name,description,price,compare_at_price,image_url,categories(name)')
+          .select('id,name,description,price,compare_at_price,image_url,stock_quantity,categories(name)')
           .eq('is_active', true)
           .gt('stock_quantity', 0)
           .order('created_at', { ascending: false }),
@@ -117,6 +118,7 @@ function App() {
             tone: 'cream',
             description: row.description || 'Discover this product on PUASH.',
             imageUrl: row.image_url || null,
+            stock: Number(row.stock_quantity || 0),
           };
         });
         setProducts(liveProducts);
@@ -643,6 +645,8 @@ function App() {
                 </span>
               </div>
               <p>{selected.description}</p>
+              <div className="detail-stock"><span className="detail-stock-dot" /> In stock · {selected.stock} available</div>
+              <div className="detail-delivery"><Truck size={16} /> Delivery options shown at checkout</div>
               <div className="modal-price">
                 {money(selected.price)} <del>{money(selected.mrp)}</del>
               </div>
