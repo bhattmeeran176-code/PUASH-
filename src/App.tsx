@@ -539,7 +539,6 @@ function App() {
                 );
                 return (
                   <article className="product-card" key={product.id}>
-                    <article className="product-card" key={product.id}>
                     <button
                       type="button"
                       className={'wishlist-heart ' + (wishlist.includes(product.id) ? 'saved' : '')}
