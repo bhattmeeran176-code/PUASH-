@@ -526,10 +526,10 @@ function App() {
             </div>
           ) : (
             <div className="empty-results">
-              <span>🔎</span>
-              <h3>No products found</h3>
-              <p>Try another search or browse all products.</p>
-              <button
+              <span>{products.length === 0 ? '🛍️' : '🔎'}</span>
+              <h3>{products.length === 0 ? 'Our first collection is coming soon' : 'No products found'}</h3>
+              <p>{products.length === 0 ? 'PUASH is getting its first products ready. Please check back soon.' : 'Try another search or browse all products.'}</p>
+              {products.length > 0 && <button
                 className="secondary-button"
                 onClick={() => {
                   setSearch('');
@@ -537,7 +537,7 @@ function App() {
                 }}
               >
                 Show all products
-              </button>
+              </button>}
             </div>
           )}
         </section>
