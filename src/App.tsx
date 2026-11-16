@@ -20,6 +20,7 @@ import {
   Sparkles,
   Star,
   Truck,
+  UserRound,
   X,
 } from 'lucide-react';
 
@@ -363,6 +364,10 @@ function App() {
               </button>
             )}
           </label>
+          <a className="header-account" href="/account" aria-label="My account">
+            <UserRound size={19} />
+            <span>Account</span>
+          </a>
           <button
             className="header-cart"
             onClick={() => setCartOpen(true)}
@@ -646,6 +651,10 @@ function App() {
         >
           <Grid2X2 size={19} />
           <span>Explore</span>
+        </button>
+        <button onClick={() => { window.location.href = '/account'; }}>
+          <UserRound size={19} />
+          <span>Account</span>
         </button>
         <button onClick={() => setCartOpen(true)} className="mobile-cart-nav">
           <ShoppingBag size={19} />
