@@ -6,6 +6,7 @@ type Category = { id: string; name: string };
 type OrderItem = { id: string; product_name: string; unit_price: number; quantity: number };
 type Order = { id: string; user_id: string; status: string; total_amount: number; subtotal_amount: number | null; delivery_fee: number; payment_method: string; shipping_address: any; customer_note: string | null; created_at: string; courier_name: string | null; tracking_number: string | null; shipped_at: string | null; delivered_at: string | null; order_items: OrderItem[] };
 type Customer = { customer_id: string; email: string | null; full_name: string | null; joined_at: string; order_count: number; delivered_spend: number };
+type ReturnRequest = { id: string; order_id: string; user_id: string; reason: string; details: string | null; status: string; admin_note: string | null; requested_at: string; orders?: { total_amount: number; shipping_address: any } | null };
 type Product = {
   id: string; name: string; slug: string; description: string | null;
   price: number; compare_at_price: number | null; image_url: string | null;
@@ -30,10 +31,12 @@ export default function Admin() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [returnRequests, setReturnRequests] = useState<ReturnRequest[]>([]);
+  const [returnNotes, setReturnNotes] = useState<Record<string,string>>({});
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [customerLoading, setCustomerLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'sales' | 'products' | 'orders' | 'customers'>('sales');
+  const [activeTab, setActiveTab] = useState<'sales' | 'products' | 'orders' | 'customers' | 'returns'>('sales');
   const [orderBusy, setOrderBusy] = useState<string | null>(null);
   const [shippingDrafts, setShippingDrafts] = useState<Record<string, { courier: string; tracking: string }>>({});
   const [productSearch, setProductSearch] = useState('');
@@ -129,6 +132,27 @@ export default function Admin() {
       .order('created_at', { ascending: false });
     if (error) setMessage('Orders load nahi hue: ' + error.message);
     else setOrders((data || []) as Order[]);
+  };
+
+  const loadReturnRequests = async () => {
+    setBusy(true);
+    const { data, error } = await supabase.from('order_return_requests')
+      .select('id,order_id,user_id,reason,details,status,admin_note,requested_at,orders(total_amount,shipping_address)')
+      .order('requested_at', { ascending: false });
+    if (error) setMessage('Return requests load nahi hui: ' + error.message);
+    else setReturnRequests((data || []) as ReturnRequest[]);
+    setBusy(false);
+  };
+
+  const updateReturnRequest = async (requestId: string, status: string) => {
+    if (!['approved','rejected','item_received','refunded'].includes(status)) return;
+    setOrderBusy(requestId); setMessage('');
+    const { error } = await supabase.from('order_return_requests')
+      .update({ status, admin_note: returnNotes[requestId]?.trim() || null, updated_at: new Date().toISOString() })
+      .eq('id', requestId);
+    setOrderBusy(null);
+    if (error) setMessage('Return request update nahi hui: ' + error.message);
+    else { setMessage('Return request update ho gayi.'); await loadReturnRequests(); }
   };
 
   const loadCustomers = async () => {
@@ -307,7 +331,7 @@ export default function Admin() {
     <header className="admin-header"><a href="/" className="admin-brand"><span>PUASH.</span><small>ADMIN</small></a><button className="admin-logout" onClick={()=>supabase.auth.signOut()}><LogOut size={16}/> Sign out</button></header>
     <main className="admin-main">
       <div className="admin-title-row"><div><div className="admin-kicker">STORE CONTROL</div><h1>{activeTab === 'sales' ? 'Sales dashboard' : activeTab === 'products' ? 'Products' : 'Orders'}</h1><p>{activeTab === 'sales' ? 'Your store performance at a glance.' : activeTab === 'products' ? 'Add, edit and publish products on your PUASH store.' : 'Review customer orders and update their fulfilment status.'}</p></div><button className="admin-refresh" onClick={() => { loadData(); loadOrders(); }}><RefreshCw size={16}/> Refresh</button></div>
-      <nav className="admin-tabs"><button className={activeTab === 'sales' ? 'active' : ''} onClick={() => setActiveTab('sales')}><BarChart3 size={16}/> Dashboard</button><button className={activeTab === 'products' ? 'active' : ''} onClick={() => setActiveTab('products')}><Package size={16}/> Products <span>{products.length}</span></button><button className={activeTab === 'orders' ? 'active' : ''} onClick={() => setActiveTab('orders')}><ClipboardList size={16}/> Orders <span>{genuineOrders.length}</span></button><button className={activeTab === 'customers' ? 'active' : ''} onClick={() => { setActiveTab('customers'); loadCustomers(); }}><Users size={16}/> Customers <span>{customers.length}</span></button></nav>
+      <nav className="admin-tabs"><button className={activeTab === 'sales' ? 'active' : ''} onClick={() => setActiveTab('sales')}><BarChart3 size={16}/> Dashboard</button><button className={activeTab === 'products' ? 'active' : ''} onClick={() => setActiveTab('products')}><Package size={16}/> Products <span>{products.length}</span></button><button className={activeTab === 'orders' ? 'active' : ''} onClick={() => setActiveTab('orders')}><ClipboardList size={16}/> Orders <span>{genuineOrders.length}</span></button><button className={activeTab === 'customers' ? 'active' : ''} onClick={() => { setActiveTab('customers'); loadCustomers(); }}><Users size={16}/> Customers <span>{customers.length}</span></button><button className={activeTab === 'returns' ? 'active' : ''} onClick={() => { setActiveTab('returns'); loadReturnRequests(); }}><RefreshCw size={16}/> Returns <span>{returnRequests.filter(item=>item.status==='pending').length}</span></button></nav>
       {message && <div className="admin-message">{message}<button onClick={()=>setMessage('')}><X size={14}/></button></div>}
       {activeTab === 'sales' ? <section className="admin-sales-dashboard">
         <div className="admin-sales-note">Figures exclude internal test orders. Sales total below counts delivered orders only.</div>
@@ -374,7 +398,21 @@ export default function Admin() {
           </article>)}</div>}
       </section>
     
-      </> : activeTab === 'customers' ? <section className="admin-panel">
+      </> : activeTab === 'returns' ? <section className="admin-panel">
+        <div className="admin-panel-heading"><div><span className="admin-panel-icon"><RefreshCw size={17}/></span><strong>Return requests <small>({returnRequests.length})</small></strong></div><button className="admin-link" onClick={loadReturnRequests}><RefreshCw size={13}/> Refresh</button></div>
+        <p className="admin-shipping-help">Review customer requests. Approving a return does not automatically issue a refund; payment/refund must be handled separately.</p>
+        {busy ? <div className="admin-empty">Return requests load ho rahi hain…</div> : returnRequests.length===0 ? <div className="admin-empty">Abhi koi return request nahi hai.</div> : <div className="admin-customer-list">{returnRequests.map(item=><article className="admin-customer-card" key={item.id}>
+          <div className="admin-customer-summary"><span className="admin-customer-avatar"><Package size={18}/></span><span className="admin-customer-identity"><strong>Order #{item.order_id.slice(0,8).toUpperCase()}</strong><small>{item.reason.replaceAll('_',' ')} · {new Date(item.requested_at).toLocaleString('en-IN')}</small><small>{item.orders?.shipping_address?.full_name || 'Customer'} · {money(Number(item.orders?.total_amount || 0))}</small></span><span className={'admin-customer-order-status status-'+item.status}>{item.status.replaceAll('_',' ')}</span></div>
+          {item.details && <p className="admin-shipping-help">Customer note: {item.details}</p>}
+          <textarea className="admin-return-note" value={returnNotes[item.id] ?? item.admin_note ?? ''} onChange={e=>setReturnNotes(prev=>({...prev,[item.id]:e.target.value}))} placeholder="Internal/customer response note (optional)" maxLength={1500}/>
+          <div className="admin-return-actions">
+            {item.status==='pending' && <><button className="admin-link" disabled={orderBusy===item.id} onClick={()=>updateReturnRequest(item.id,'approved')}>Approve return</button><button className="admin-link" disabled={orderBusy===item.id} onClick={()=>updateReturnRequest(item.id,'rejected')}>Reject</button></>}
+            {item.status==='approved' && <button className="admin-link" disabled={orderBusy===item.id} onClick={()=>updateReturnRequest(item.id,'item_received')}>Mark item received</button>}
+            {item.status==='item_received' && <button className="admin-link" disabled={orderBusy===item.id} onClick={()=>updateReturnRequest(item.id,'refunded')}>Mark refunded</button>}
+            {orderBusy===item.id && <small>Saving…</small>}
+          </div>
+        </article>)}</div>}
+      </section> : activeTab === 'customers' ? <section className="admin-panel">
         <div className="admin-panel-heading"><div><span className="admin-panel-icon"><Users size={17}/></span><strong>Customer directory <small>({customers.length})</small></strong></div><button className="admin-link" onClick={loadCustomers}><RefreshCw size={13}/> Refresh list</button></div>
         <input className="admin-product-search" value={customerSearch} onChange={e=>setCustomerSearch(e.target.value)} placeholder="Search customer name or email…" aria-label="Search customers"/>
         {customerLoading ? <div className="admin-empty">Customers load ho rahe hain…</div> : customers.filter(customer => (customer.full_name || '').toLowerCase().includes(customerSearch.toLowerCase()) || (customer.email || '').toLowerCase().includes(customerSearch.toLowerCase())).length === 0 ? <div className="admin-empty">Koi customer nahi mila.</div> :
