@@ -163,7 +163,7 @@ function App() {
     if (sort === 'high') list = [...list].sort((a, b) => b.price - a.price);
     if (sort === 'rating') list = [...list].sort((a, b) => b.rating - a.rating);
     return list;
-  }, [category, search, sort]);
+  }, [category, search, sort, products]);
 
   const cartItems = products.filter(product => (cart[product.id] || 0) > 0);
   const cartCount = Object.values(cart).reduce(
@@ -178,15 +178,13 @@ function App() {
   const total = subtotal + delivery;
 
   const addToCart = (product: Product) => {
-    setCart(current => {
-      const currentQuantity = current[product.id] || 0;
-      if (product.stock <= currentQuantity) {
-        setToast(product.stock <= 0 ? 'Ye product abhi out of stock hai' : 'Available stock se zyada quantity add nahi kar sakte');
-        return current;
-      }
-      setToast(product.name + ' added to cart');
-      return { ...current, [product.id]: currentQuantity + 1 };
-    });
+    const currentQuantity = cart[product.id] || 0;
+    if (product.stock <= currentQuantity) {
+      setToast(product.stock <= 0 ? 'Ye product abhi out of stock hai' : 'Available stock se zyada quantity add nahi kar sakte');
+      return;
+    }
+    setCart(current => ({ ...current, [product.id]: (current[product.id] || 0) + 1 }));
+    setToast(product.name + ' added to cart');
   };
 
   const changeQuantity = (id: string, amount: number) => {
@@ -196,10 +194,7 @@ function App() {
       if (quantity <= 0) delete next[id];
       else {
         const product = products.find(item => item.id === id);
-        if (product && quantity > product.stock) {
-          setToast('Available stock sirf ' + product.stock + ' hai');
-          return current;
-        }
+        if (product && quantity > product.stock) return current;
         next[id] = quantity;
       }
       return next;
@@ -215,7 +210,7 @@ function App() {
     }
     const unavailable = cartItems.find(item => (cart[item.id] || 0) > item.stock || item.stock <= 0);
     if (unavailable) {
-      setCheckoutError(unavailable.name + ' ka available stock kam hai. Cart quantity update karein.');
+      setToast(unavailable.name + ' ka available stock kam hai. Cart quantity update karein.');
       return;
     }
     if (cartItems.some(item => item.id.startsWith('demo-'))) {
