@@ -154,7 +154,11 @@ export default function Admin() {
   const updateOrderStatus = async (orderId: string, status: string) => {
     if (!['pending','confirmed','processing','shipped','delivered','cancelled'].includes(status)) return;
     setOrderBusy(orderId); setMessage('');
-    const { error } = await supabase.from('orders').update({ status, updated_at: new Date().toISOString() }).eq('id', orderId);
+    const now = new Date().toISOString();
+    const orderUpdate: Record<string, any> = { status, updated_at: now };
+    if (status === 'shipped') orderUpdate.shipped_at = now;
+    if (status === 'delivered') orderUpdate.delivered_at = now;
+    const { error } = await supabase.from('orders').update(orderUpdate).eq('id', orderId);
     setOrderBusy(null);
     if (error) setMessage('Order status update nahi hua: ' + error.message);
     else { setMessage('Order status update ho gaya.'); await loadOrders(); }
