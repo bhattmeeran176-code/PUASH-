@@ -42,6 +42,7 @@ export default function Admin() {
   const [categoryId, setCategoryId] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState('');
   const [active, setActive] = useState(true);
 
   useEffect(() => {
@@ -61,6 +62,13 @@ export default function Admin() {
     });
     return () => { alive = false; listener.subscription.unsubscribe(); };
   }, []);
+
+  useEffect(() => {
+    if (!imageFile) { setImagePreview(''); return; }
+    const preview = URL.createObjectURL(imageFile);
+    setImagePreview(preview);
+    return () => URL.revokeObjectURL(preview);
+  }, [imageFile]);
 
   const loadData = async () => {
     setBusy(true);
@@ -137,11 +145,13 @@ export default function Admin() {
     if (imageFile && (!['image/jpeg', 'image/png', 'image/webp'].includes(imageFile.type) || imageFile.size > 5 * 1024 * 1024)) { setMessage('Image JPG, PNG ya WebP ho aur 5 MB se chhoti ho.'); return; }
     setBusy(true); setMessage('');
     let finalImage = imageUrl.trim() || null;
+    let uploadedImagePath: string | null = null;
     if (imageFile) {
       const safeName = imageFile.name.toLowerCase().replace(/[^a-z0-9.-]+/g, '-');
-      const path = Date.now() + '-' + safeName;
+      const path = Date.now() + '-' + crypto.randomUUID().slice(0, 8) + '-' + safeName;
       const { error: uploadError } = await supabase.storage.from('product-images').upload(path, imageFile, { upsert: false, contentType: imageFile.type });
       if (uploadError) { setBusy(false); setMessage('Image upload failed: ' + uploadError.message); return; }
+      uploadedImagePath = path;
       finalImage = supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl;
     }
     const payload = {
@@ -155,7 +165,11 @@ export default function Admin() {
       ? await supabase.from('products').update(payload).eq('id', editing)
       : await supabase.from('products').insert(payload);
     setBusy(false);
-    if (result.error) { setMessage('Save nahi hua: ' + result.error.message); return; }
+    if (result.error) {
+      if (uploadedImagePath) await supabase.storage.from('product-images').remove([uploadedImagePath]);
+      setMessage('Save nahi hua: ' + result.error.message);
+      return;
+    }
     setMessage(editing ? 'Product update ho gaya.' : 'Product add ho gaya.');
     resetForm(); await loadData();
   };
@@ -212,6 +226,7 @@ export default function Admin() {
           <label>Stock quantity<input type="number" min="0" step="1" value={stock} onChange={e=>setStock(e.target.value)} required/></label>
           <label className="admin-wide">Description<textarea value={description} onChange={e=>setDescription(e.target.value)} rows={3} placeholder="Product details…"/></label>
           <label className="admin-wide">Product image<input type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>setImageFile(e.target.files?.[0] || null)}/><small>JPG, PNG or WebP · Maximum 5 MB</small></label>
+          {(imagePreview || imageUrl) && <div className="admin-image-preview"><img src={imagePreview || imageUrl} alt="Product preview" onError={e=>{e.currentTarget.style.display='none';}}/><span>Image preview</span></div>}
           <label className="admin-wide">Or image URL<input type="url" value={imageUrl} onChange={e=>setImageUrl(e.target.value)} placeholder="https://…"/></label>
           <label className="admin-check"><input type="checkbox" checked={active} onChange={e=>setActive(e.target.checked)}/> Publish product on store</label>
           <button className="admin-primary admin-save" disabled={busy}><Save size={16}/>{busy ? 'Saving…' : editing ? 'Save changes' : <><Plus size={16}/> Add product</>}</button>
