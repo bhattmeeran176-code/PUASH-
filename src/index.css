@@ -1536,3 +1536,41 @@ main {
 .address-default-check{display:flex!important;align-items:center;gap:9px!important}
 .address-default-check input{width:17px;height:17px;accent-color:#385540}
 @media(max-width:640px){.account-card-wide{padding:22px 16px}.address-book-heading{align-items:flex-start}.address-form{padding:12px}.saved-address{padding:12px}}
+
+
+/* Secure checkout address selection */
+.checkout-address-list {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+}
+.checkout-address-list > strong {
+  font-size: 13px;
+}
+.checkout-address-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid var(--line, #e8e2da);
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+  background: #fff;
+}
+.checkout-address-option input {
+  margin-top: 4px;
+  accent-color: #496453;
+}
+.checkout-address-option span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.checkout-address-option b {
+  font-size: 13px;
+}
+.checkout-address-option small {
+  color: #77736c;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
