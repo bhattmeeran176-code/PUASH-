@@ -1,20 +1,27 @@
 # PUASH
 
-PUASH is a mobile-first shopping marketplace prototype inspired by Kashmir.
+PUASH is a mobile-first shopping marketplace inspired by Kashmir.
 
 ## Included
 - React + Vite + TypeScript frontend
 - Supabase client connection
-- Live product and category reads from Supabase
-- Customer account with private delivery address book (add, edit, delete, default address)
-- Sample catalogue fallback while the live product catalogue is empty
-- Product search, sorting, and detail view
+- Live product and category catalogue
+- Customer accounts and private delivery address book
+- Product search, category filters, sorting, and dedicated product detail pages
 - Client-side cart with quantity controls
-- Demo checkout and order confirmation
+- Admin product catalogue: add, edit, publish/hide, image upload, and stock adjustment
+- Secure Cash on Delivery order placement through a database function
+- Server-calculated prices and delivery fee; stock checked and deducted transactionally
+- Customer order history and order status tracking
+- Admin order list, search, status filters, and fulfilment updates
+- Automatic stock restoration when an order is cancelled
 - Responsive mobile-first layout and web app manifest
 
-## Backend status
-The PUASH Supabase project is connected for public catalogue reads. Database tables have Row Level Security enabled. Product and category management, customer authentication, secure order placement, payment processing, and fulfilment still need to be implemented. Checkout remains a demo and does not collect payment or create a real order.
+## Important limitations
+- PUASH currently supports Cash on Delivery only; online payments are not integrated.
+- Delivery operations, courier integration, returns/refunds, and customer support workflows are not yet integrated.
+- The live catalogue must contain genuine products, accurate prices, images, and available stock before accepting customer orders.
+- Keep the Supabase leaked-password protection setting enabled before opening registration to the public.
 
 ## Environment variables
 The app has safe public-project defaults in `src/supabase.ts`. For another environment, copy `.env.example` to `.env.local` and add the Supabase project URL and **publishable** key. Never put a Supabase secret or service-role key in frontend code.
