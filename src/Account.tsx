@@ -1,6 +1,26 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { supabase } from './supabase';
-import { ArrowLeft, CheckCircle2, LogOut, ShieldCheck, UserRound } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, LogOut, MapPin, Plus, ShieldCheck, Trash2, UserRound, X } from 'lucide-react';
+
+type Address = {
+  id: string;
+  label: string;
+  full_name: string;
+  phone: string;
+  line1: string;
+  line2: string | null;
+  city: string;
+  state: string;
+  postal_code: string;
+  country: string;
+  is_default: boolean;
+};
+
+const blankAddress = {
+  label: 'Home', full_name: '', phone: '', line1: '', line2: '',
+  city: '', state: 'Jammu and Kashmir', postal_code: '', country: 'India',
+  is_default: false,
+};
 
 export default function Account() {
   const [user, setUser] = useState<any>(null);
@@ -11,18 +31,29 @@ export default function Account() {
   const [fullName, setFullName] = useState('');
   const [savedName, setSavedName] = useState('');
   const [busy, setBusy] = useState(false);
+  const [addressBusy, setAddressBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [addressForm, setAddressForm] = useState(blankAddress);
+  const [editingAddress, setEditingAddress] = useState<string | null>(null);
+  const [showAddressForm, setShowAddressForm] = useState(false);
 
   const loadProfile = async (current: any) => {
     setUser(current);
     if (current) {
-      const { data, error: profileError } = await supabase
-        .from('profiles').select('full_name').eq('id', current.id).maybeSingle();
+      const [{ data, error: profileError }, { data: addressData, error: addressError }] = await Promise.all([
+        supabase.from('profiles').select('full_name').eq('id', current.id).maybeSingle(),
+        supabase.from('customer_addresses').select('*').eq('user_id', current.id).order('is_default', { ascending: false }).order('created_at', { ascending: false }),
+      ]);
       if (profileError) setError('Profile load nahi hua: ' + profileError.message);
+      if (addressError) setError('Address book load nahi hua: ' + addressError.message);
       const name = data?.full_name || current.user_metadata?.full_name || '';
       setFullName(name);
       setSavedName(name);
+      setAddresses((addressData || []) as Address[]);
+    } else {
+      setAddresses([]);
     }
     setReady(true);
   };
@@ -44,14 +75,11 @@ export default function Account() {
       ? await supabase.auth.signInWithPassword({ email: email.trim(), password })
       : await supabase.auth.signUp({
           email: email.trim(), password,
-          options: {
-            data: { full_name: fullName.trim() },
-            emailRedirectTo: 'https://puash.pages.dev/'
-          }
+          options: { data: { full_name: fullName.trim() }, emailRedirectTo: 'https://puash.pages.dev/account' }
         });
     setBusy(false);
     if (result.error) setError(result.error.message);
-    else if (mode === 'signup' && !result.data.session) setMessage('Account ban gaya! Apna email inbox check karke confirmation link par tap karein. Phir yahan sign in karein.');
+    else if (mode === 'signup' && !result.data.session) setMessage('Account ban gaya! Email confirmation link par tap karein, phir yahan sign in karein.');
     else setMessage(mode === 'signup' ? 'Account create ho gaya.' : 'Welcome back!');
   };
 
@@ -67,10 +95,67 @@ export default function Account() {
     else { setSavedName(fullName.trim()); setMessage('Profile update ho gaya.'); }
   };
 
+  const saveAddress = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!user) return;
+    setAddressBusy(true); setError(''); setMessage('');
+    if (addressForm.is_default) {
+      const { error: clearError } = await supabase.from('customer_addresses').update({ is_default: false }).eq('user_id', user.id);
+      if (clearError) { setAddressBusy(false); setError('Default address update nahi hua: ' + clearError.message); return; }
+    }
+    const payload = { ...addressForm, user_id: user.id, line2: addressForm.line2.trim() || null };
+    const result = editingAddress
+      ? await supabase.from('customer_addresses').update(payload).eq('id', editingAddress).eq('user_id', user.id)
+      : await supabase.from('customer_addresses').insert(payload);
+    setAddressBusy(false);
+    if (result.error) { setError('Address save nahi hua: ' + result.error.message); return; }
+    setMessage(editingAddress ? 'Address update ho gaya.' : 'Address save ho gaya.');
+    setAddressForm(blankAddress); setEditingAddress(null); setShowAddressForm(false);
+    await refreshAddresses();
+  };
+
+  const refreshAddresses = async () => {
+    if (!user) return;
+    const { data, error: loadError } = await supabase.from('customer_addresses').select('*')
+      .eq('user_id', user.id).order('is_default', { ascending: false }).order('created_at', { ascending: false });
+    if (loadError) setError('Address list refresh nahi hui: ' + loadError.message);
+    else setAddresses((data || []) as Address[]);
+  };
+
+  const editAddress = (address: Address) => {
+    setAddressForm({
+      label: address.label, full_name: address.full_name, phone: address.phone,
+      line1: address.line1, line2: address.line2 || '', city: address.city,
+      state: address.state, postal_code: address.postal_code, country: address.country,
+      is_default: address.is_default,
+    });
+    setEditingAddress(address.id); setShowAddressForm(true); setError(''); setMessage('');
+  };
+
+  const deleteAddress = async (id: string) => {
+    if (!user) return;
+    setAddressBusy(true); setError(''); setMessage('');
+    const { error: deleteError } = await supabase.from('customer_addresses').delete().eq('id', id).eq('user_id', user.id);
+    setAddressBusy(false);
+    if (deleteError) setError('Address delete nahi hua: ' + deleteError.message);
+    else { setMessage('Address delete ho gaya.'); await refreshAddresses(); }
+  };
+
+  const makeDefault = async (id: string) => {
+    if (!user) return;
+    setAddressBusy(true); setError(''); setMessage('');
+    const { error: clearError } = await supabase.from('customer_addresses').update({ is_default: false }).eq('user_id', user.id);
+    if (clearError) { setAddressBusy(false); setError(clearError.message); return; }
+    const { error: setErrorResult } = await supabase.from('customer_addresses').update({ is_default: true }).eq('id', id).eq('user_id', user.id);
+    setAddressBusy(false);
+    if (setErrorResult) setError('Default address set nahi hua: ' + setErrorResult.message);
+    else { setMessage('Default delivery address update ho gaya.'); await refreshAddresses(); }
+  };
+
   if (!ready) return <div className="account-screen"><div className="account-card">PUASH account load ho raha hai…</div></div>;
 
   return <div className="account-screen">
-    <section className="account-card">
+    <section className="account-card account-card-wide">
       <a className="account-back" href="/"><ArrowLeft size={16}/> PUASH store par wapas</a>
       <div className="account-brand">PUASH<span>.</span><small>YOUR ACCOUNT</small></div>
       <div className="account-icon">{user ? <UserRound size={26}/> : <ShieldCheck size={26}/>}</div>
@@ -88,12 +173,37 @@ export default function Account() {
         </button>
       </> : <>
         <h1>My account.</h1>
-        <p>Welcome to PUASH. Yahan apni basic profile details update kar sakte hain.</p>
+        <p>Apni profile aur delivery addresses yahan manage karein.</p>
         <div className="account-email"><small>Signed in as</small><strong>{user.email}</strong></div>
         <form className="account-form" onSubmit={saveProfile}>
           <label>Full name<input value={fullName} onChange={e=>setFullName(e.target.value)} autoComplete="name" placeholder="Your name"/></label>
           <button className="account-primary" disabled={busy || fullName.trim() === savedName}>{busy ? 'Saving…' : 'Save profile'}</button>
         </form>
+
+        <div className="address-book">
+          <div className="address-book-heading"><div><MapPin size={18}/><strong>Delivery addresses</strong></div><button type="button" className="address-add" onClick={()=>{setAddressForm({...blankAddress,full_name:fullName.trim()});setEditingAddress(null);setShowAddressForm(true);setError('');}}><Plus size={15}/> Add address</button></div>
+          <p className="address-hint">Apne delivery addresses save karein. Aapka address sirf aapke account mein visible hoga.</p>
+          {addresses.length === 0 && !showAddressForm && <div className="address-empty">Abhi koi address save nahi hai.</div>}
+          {addresses.map(address=><article className="saved-address" key={address.id}>
+            <div className="saved-address-top"><div><strong>{address.label}</strong>{address.is_default && <span>Default</span>}</div><div className="saved-address-actions"><button type="button" onClick={()=>editAddress(address)}>Edit</button><button type="button" disabled={addressBusy} onClick={()=>deleteAddress(address.id)} aria-label="Delete address"><Trash2 size={14}/></button></div></div>
+            <strong>{address.full_name} · {address.phone}</strong>
+            <p>{[address.line1,address.line2,address.city,address.state,address.postal_code,address.country].filter(Boolean).join(', ')}</p>
+            {!address.is_default && <button type="button" className="address-default" disabled={addressBusy} onClick={()=>makeDefault(address.id)}>Set as default</button>}
+          </article>)}
+          {showAddressForm && <form className="account-form address-form" onSubmit={saveAddress}>
+            <div className="address-form-heading"><strong>{editingAddress ? 'Edit delivery address' : 'Add delivery address'}</strong><button type="button" onClick={()=>{setShowAddressForm(false);setEditingAddress(null);setAddressForm(blankAddress);}} aria-label="Close address form"><X size={17}/></button></div>
+            <label>Address label<select value={addressForm.label} onChange={e=>setAddressForm({...addressForm,label:e.target.value})}><option>Home</option><option>Work</option><option>Other</option></select></label>
+            <label>Full name<input required maxLength={120} value={addressForm.full_name} onChange={e=>setAddressForm({...addressForm,full_name:e.target.value})} placeholder="Receiver name"/></label>
+            <label>Phone number<input required type="tel" maxLength={20} value={addressForm.phone} onChange={e=>setAddressForm({...addressForm,phone:e.target.value})} placeholder="Contact number"/></label>
+            <label>Address line 1<input required minLength={5} maxLength={240} value={addressForm.line1} onChange={e=>setAddressForm({...addressForm,line1:e.target.value})} placeholder="House, street, locality"/></label>
+            <label>Address line 2 (optional)<input maxLength={240} value={addressForm.line2} onChange={e=>setAddressForm({...addressForm,line2:e.target.value})} placeholder="Landmark, area"/></label>
+            <label>City / Town<input required minLength={2} maxLength={100} value={addressForm.city} onChange={e=>setAddressForm({...addressForm,city:e.target.value})} placeholder="Srinagar"/></label>
+            <label>State<input required minLength={2} maxLength={100} value={addressForm.state} onChange={e=>setAddressForm({...addressForm,state:e.target.value})}/></label>
+            <label>PIN code<input required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={addressForm.postal_code} onChange={e=>setAddressForm({...addressForm,postal_code:e.target.value.replace(/\D/g,'').slice(0,6)})} placeholder="190001"/></label>
+            <label className="address-default-check"><input type="checkbox" checked={addressForm.is_default} onChange={e=>setAddressForm({...addressForm,is_default:e.target.checked})}/> Set as my default address</label>
+            <button className="account-primary" disabled={addressBusy}>{addressBusy ? 'Saving address…' : editingAddress ? 'Update address' : 'Save address'}</button>
+          </form>}
+        </div>
         <button className="account-signout" onClick={()=>supabase.auth.signOut()}><LogOut size={16}/> Sign out</button>
       </>}
       {message && <div className="account-message"><CheckCircle2 size={16}/>{message}</div>}
