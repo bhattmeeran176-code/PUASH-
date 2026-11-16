@@ -147,6 +147,23 @@ export default function Account() {
     return () => { void supabase.removeChannel(channel); };
   }, [user?.id]);
 
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase.channel('puash-return-requests-' + user.id)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'order_return_requests',
+        filter: 'user_id=eq.' + user.id,
+      }, (payload) => {
+        const changed = payload.new as { id: string; order_id: string; status: string; admin_note: string | null; reason: string; details: string | null; requested_at: string };
+        ordersRef.current = ordersRef.current.map(order => order.id === changed.order_id
+          ? { ...order, order_return_requests: (order.order_return_requests || []).map(request => request.id === changed.id ? changed : request) }
+          : order);
+        setOrders(ordersRef.current);
+        setStatusNotification('PUASH updated your return request for order #' + changed.order_id.slice(0,8).toUpperCase() + '.');
+      }).subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [user?.id]);
+
   const submitReturnRequest = async (order: CustomerOrder) => {
     if (!user || order.status !== 'delivered' || order.order_return_requests?.length) return;
     const draft = returnDrafts[order.id] || { reason: 'damaged', details: '' };
