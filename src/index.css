@@ -1998,3 +1998,17 @@ main {
 .customer-shipping-info>div span{color:var(--muted)}
 .customer-shipping-info>div b{text-align:right;overflow-wrap:anywhere}
 .customer-shipping-info>small{font-size:10px;line-height:1.5;color:var(--muted);padding-top:4px}
+
+
+.admin-shipping-help{font-size:11px;line-height:1.55;color:var(--muted);margin:8px 0 12px}
+.admin-return-note{width:100%;min-height:64px;padding:9px;border:1px solid var(--line);border-radius:6px;background:white;color:var(--ink);font:inherit;font-size:11px;resize:vertical;margin:8px 0}
+.admin-return-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.admin-return-actions .admin-link{padding:7px 10px;border:1px solid var(--line);border-radius:5px}
+.customer-return-panel{margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:7px;background:#fffdf8;display:flex;flex-direction:column;gap:8px}
+.customer-return-panel>strong{font-size:12px}
+.customer-return-panel>p,.customer-return-status small{font-size:10px;line-height:1.5;color:var(--muted);margin:0}
+.customer-return-panel select,.customer-return-panel textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:5px;background:white;color:var(--ink);font:inherit;font-size:11px}
+.customer-return-panel textarea{min-height:60px;resize:vertical}
+.customer-return-panel>button{align-self:flex-start;padding:9px 12px;border:0;border-radius:5px;background:var(--ink);color:white;font:inherit;font-size:11px;font-weight:600}
+.customer-return-panel>button:disabled{opacity:.55}
+.customer-return-status{display:flex;flex-direction:column;gap:5px;font-size:11px}
