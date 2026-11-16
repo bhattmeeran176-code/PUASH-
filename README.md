@@ -13,6 +13,7 @@ PUASH is a mobile-first shopping marketplace inspired by Kashmir.
 - Secure Cash on Delivery order placement through a database function
 - Server-calculated prices and delivery fee; stock checked and deducted transactionally
 - Customer order history and order status tracking
+- Product ratings and reviews from customers with delivered orders (one review per customer per product)
 - Admin order list, search, status filters, and fulfilment updates
 - Automatic stock restoration when an order is cancelled
 - Responsive mobile-first layout and web app manifest
