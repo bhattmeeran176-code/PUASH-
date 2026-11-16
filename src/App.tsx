@@ -904,7 +904,7 @@ function App() {
             <button
               className="primary-button full-button"
               onClick={placeOrder}
-              disabled={placingOrder || !selectedAddressId || !!checkoutError}
+              disabled={placingOrder || !selectedAddressId}
             >
               {placingOrder ? 'Placing order…' : 'Place Cash on Delivery order'} <Check size={17} />
             </button>
