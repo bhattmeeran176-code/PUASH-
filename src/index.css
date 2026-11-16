@@ -1890,3 +1890,14 @@ main {
 .product-card{position:relative}
 .wishlist-heart{position:absolute;z-index:4;right:10px;top:10px;width:34px;height:34px;border:1px solid #e8e3da;border-radius:50%;background:#fffdf7;color:#77736b;display:grid;place-items:center;cursor:pointer;box-shadow:0 2px 9px #0000000d}
 .wishlist-heart.saved{color:#bd5c4c;border-color:#e8c7c0;background:#fff7f4}
+
+.account-wishlist{margin:25px 0;border-top:1px solid var(--line);padding-top:20px}
+.account-wishlist-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.account-wishlist-item{display:flex;flex-direction:column;gap:7px;padding:10px;border:1px solid var(--line);border-radius:8px;background:#fffefa;min-width:0}
+.account-wishlist-item img,.account-wishlist-placeholder{width:100%;height:115px;object-fit:cover;border-radius:5px;background:#f1eee7}
+.account-wishlist-placeholder{display:grid;place-items:center;font-size:30px}
+.account-wishlist-item>strong{font-size:11px;line-height:1.4}
+.account-wishlist-item>span{font-size:12px;font-weight:700}
+.account-wishlist-item>div:last-child{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.account-wishlist-item a,.account-wishlist-item button{font-size:10px;color:#a85c40;font-weight:700;text-decoration:none;border:0;background:transparent;padding:4px 0}
+@media(min-width:620px){.account-wishlist-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
