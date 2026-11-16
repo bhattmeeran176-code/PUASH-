@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { supabase } from './supabase';
-import { ArrowLeft, ImagePlus, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X } from 'lucide-react';
+import { ArrowLeft, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X } from 'lucide-react';
 
 type Category = { id: string; name: string };
 type Product = {
