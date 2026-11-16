@@ -4,7 +4,7 @@ import { ArrowLeft, BarChart3, ClipboardList, LogOut, Package, Plus, RefreshCw, 
 
 type Category = { id: string; name: string };
 type OrderItem = { id: string; product_name: string; unit_price: number; quantity: number };
-type Order = { id: string; user_id: string; status: string; total_amount: number; subtotal_amount: number | null; delivery_fee: number; payment_method: string; shipping_address: any; customer_note: string | null; created_at: string; courier_name: string | null; tracking_number: string | null; shipped_at: string | null; delivered_at: string | null; order_items: OrderItem[] };
+type Order = { id: string; user_id: string; status: string; total_amount: number; subtotal_amount: number | null; delivery_fee: number; payment_method: string; shipping_address: any; customer_note: string | null; created_at: string; coupon_code: string | null; discount_amount: number; courier_name: string | null; tracking_number: string | null; shipped_at: string | null; delivered_at: string | null; order_items: OrderItem[] };
 type Customer = { customer_id: string; email: string | null; full_name: string | null; joined_at: string; order_count: number; delivered_spend: number };
 type Coupon = { id:string; code:string; discount_type:'percentage'|'fixed'; discount_value:number; min_order_amount:number; max_discount:number|null; starts_at:string|null; expires_at:string|null; usage_limit:number|null; per_user_limit:number; usage_count:number; is_active:boolean };
 type ReturnRequest = { id: string; order_id: string; user_id: string; reason: string; details: string | null; status: string; admin_note: string | null; requested_at: string; orders?: { total_amount: number; shipping_address: any } | null };
@@ -113,13 +113,15 @@ export default function Admin() {
       return (orderStatusFilter === 'all' || order.status === orderStatusFilter) && haystack.includes(orderSearch.trim().toLowerCase());
     });
     const quote = (value: unknown) => '"' + String(value ?? '').replace(/"/g, '""') + '"';
-    const header = ['Order ID','Date','Status','Subtotal','Delivery Fee','Total','Payment Method','Items'];
+    const header = ['Order ID','Date','Status','Subtotal','Delivery Fee','Coupon','Discount','Total','Payment Method','Items'];
     const lines = rows.map(order => [
       order.id,
       new Date(order.created_at).toLocaleString('en-IN'),
       order.status,
       order.subtotal_amount ?? order.total_amount,
       order.delivery_fee,
+      order.coupon_code || '',
+      order.discount_amount || 0,
       order.total_amount,
       order.payment_method,
       (order.order_items || []).map(item => item.product_name + ' x ' + item.quantity).join('; ')
@@ -138,7 +140,7 @@ export default function Admin() {
 
   const loadOrders = async () => {
     const { data, error } = await supabase.from('orders')
-      .select('id,user_id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,customer_note,created_at,courier_name,tracking_number,shipped_at,delivered_at,order_items(id,product_name,unit_price,quantity)')
+      .select('id,user_id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,customer_note,created_at,coupon_code,discount_amount,courier_name,tracking_number,shipped_at,delivered_at,order_items(id,product_name,unit_price,quantity)')
       .order('created_at', { ascending: false });
     if (error) setMessage('Orders load nahi hue: ' + error.message);
     else setOrders((data || []) as Order[]);
