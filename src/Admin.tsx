@@ -6,6 +6,7 @@ type Category = { id: string; name: string };
 type OrderItem = { id: string; product_name: string; unit_price: number; quantity: number };
 type Order = { id: string; user_id: string; status: string; total_amount: number; subtotal_amount: number | null; delivery_fee: number; payment_method: string; shipping_address: any; customer_note: string | null; created_at: string; courier_name: string | null; tracking_number: string | null; shipped_at: string | null; delivered_at: string | null; order_items: OrderItem[] };
 type Customer = { customer_id: string; email: string | null; full_name: string | null; joined_at: string; order_count: number; delivered_spend: number };
+type Coupon = { id:string; code:string; discount_type:'percentage'|'fixed'; discount_value:number; min_order_amount:number; max_discount:number|null; starts_at:string|null; expires_at:string|null; usage_limit:number|null; per_user_limit:number; usage_count:number; is_active:boolean };
 type ReturnRequest = { id: string; order_id: string; user_id: string; reason: string; details: string | null; status: string; admin_note: string | null; requested_at: string; orders?: { total_amount: number; shipping_address: any } | null };
 type Product = {
   id: string; name: string; slug: string; description: string | null;
@@ -32,11 +33,20 @@ export default function Admin() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [returnRequests, setReturnRequests] = useState<ReturnRequest[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponType, setCouponType] = useState<'percentage'|'fixed'>('percentage');
+  const [couponValue, setCouponValue] = useState('10');
+  const [couponMinimum, setCouponMinimum] = useState('0');
+  const [couponMaximum, setCouponMaximum] = useState('');
+  const [couponExpiry, setCouponExpiry] = useState('');
+  const [couponLimit, setCouponLimit] = useState('');
+  const [couponPerUser, setCouponPerUser] = useState('1');
   const [returnNotes, setReturnNotes] = useState<Record<string,string>>({});
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [customerLoading, setCustomerLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'sales' | 'products' | 'orders' | 'customers' | 'returns'>('sales');
+  const [activeTab, setActiveTab] = useState<'sales' | 'products' | 'orders' | 'customers' | 'returns' | 'coupons'>('sales');
   const [orderBusy, setOrderBusy] = useState<string | null>(null);
   const [shippingDrafts, setShippingDrafts] = useState<Record<string, { courier: string; tracking: string }>>({});
   const [productSearch, setProductSearch] = useState('');
@@ -132,6 +142,39 @@ export default function Admin() {
       .order('created_at', { ascending: false });
     if (error) setMessage('Orders load nahi hue: ' + error.message);
     else setOrders((data || []) as Order[]);
+  };
+
+  const loadCoupons = async () => {
+    setBusy(true);
+    const { data, error } = await supabase.from('coupons').select('*').order('created_at',{ascending:false});
+    if(error) setMessage('Coupons load nahi hue: '+error.message);
+    else setCoupons((data||[]) as Coupon[]);
+    setBusy(false);
+  };
+
+  const createCoupon = async (event: FormEvent) => {
+    event.preventDefault();
+    const code=couponCode.trim().toUpperCase();
+    const value=Number(couponValue), minimum=Number(couponMinimum||0), perUser=Number(couponPerUser||1);
+    if(!/^[A-Z0-9_-]{3,32}$/.test(code)) { setMessage('Coupon code 3–32 characters ka hona chahiye (A-Z, 0-9, _ or -).'); return; }
+    if(!Number.isFinite(value)||value<=0||(couponType==='percentage'&&value>100)||!Number.isFinite(minimum)||minimum<0||!Number.isInteger(perUser)||perUser<1) { setMessage('Coupon values check karein.'); return; }
+    setBusy(true); setMessage('');
+    const {error}=await supabase.from('coupons').insert({
+      code,discount_type:couponType,discount_value:value,min_order_amount:minimum,
+      max_discount:couponMaximum?Number(couponMaximum):null,
+      expires_at:couponExpiry?new Date(couponExpiry).toISOString():null,
+      usage_limit:couponLimit?Number(couponLimit):null,per_user_limit:perUser
+    });
+    setBusy(false);
+    if(error) setMessage('Coupon create nahi hua: '+error.message);
+    else {setMessage('Coupon '+code+' create ho gaya.');setCouponCode('');setCouponValue('10');setCouponMinimum('0');setCouponMaximum('');setCouponExpiry('');setCouponLimit('');setCouponPerUser('1');await loadCoupons();}
+  };
+
+  const toggleCoupon = async (coupon:Coupon) => {
+    setOrderBusy(coupon.id);
+    const {error}=await supabase.from('coupons').update({is_active:!coupon.is_active,updated_at:new Date().toISOString()}).eq('id',coupon.id);
+    setOrderBusy(null);
+    if(error) setMessage('Coupon update nahi hua: '+error.message); else {setMessage('Coupon status update ho gaya.');await loadCoupons();}
   };
 
   const loadReturnRequests = async () => {
@@ -331,7 +374,7 @@ export default function Admin() {
     <header className="admin-header"><a href="/" className="admin-brand"><span>PUASH.</span><small>ADMIN</small></a><button className="admin-logout" onClick={()=>supabase.auth.signOut()}><LogOut size={16}/> Sign out</button></header>
     <main className="admin-main">
       <div className="admin-title-row"><div><div className="admin-kicker">STORE CONTROL</div><h1>{activeTab === 'sales' ? 'Sales dashboard' : activeTab === 'products' ? 'Products' : 'Orders'}</h1><p>{activeTab === 'sales' ? 'Your store performance at a glance.' : activeTab === 'products' ? 'Add, edit and publish products on your PUASH store.' : 'Review customer orders and update their fulfilment status.'}</p></div><button className="admin-refresh" onClick={() => { loadData(); loadOrders(); }}><RefreshCw size={16}/> Refresh</button></div>
-      <nav className="admin-tabs"><button className={activeTab === 'sales' ? 'active' : ''} onClick={() => setActiveTab('sales')}><BarChart3 size={16}/> Dashboard</button><button className={activeTab === 'products' ? 'active' : ''} onClick={() => setActiveTab('products')}><Package size={16}/> Products <span>{products.length}</span></button><button className={activeTab === 'orders' ? 'active' : ''} onClick={() => setActiveTab('orders')}><ClipboardList size={16}/> Orders <span>{genuineOrders.length}</span></button><button className={activeTab === 'customers' ? 'active' : ''} onClick={() => { setActiveTab('customers'); loadCustomers(); }}><Users size={16}/> Customers <span>{customers.length}</span></button><button className={activeTab === 'returns' ? 'active' : ''} onClick={() => { setActiveTab('returns'); loadReturnRequests(); }}><RefreshCw size={16}/> Returns <span>{returnRequests.filter(item=>item.status==='pending').length}</span></button></nav>
+      <nav className="admin-tabs"><button className={activeTab === 'sales' ? 'active' : ''} onClick={() => setActiveTab('sales')}><BarChart3 size={16}/> Dashboard</button><button className={activeTab === 'products' ? 'active' : ''} onClick={() => setActiveTab('products')}><Package size={16}/> Products <span>{products.length}</span></button><button className={activeTab === 'orders' ? 'active' : ''} onClick={() => setActiveTab('orders')}><ClipboardList size={16}/> Orders <span>{genuineOrders.length}</span></button><button className={activeTab === 'customers' ? 'active' : ''} onClick={() => { setActiveTab('customers'); loadCustomers(); }}><Users size={16}/> Customers <span>{customers.length}</span></button><button className={activeTab === 'returns' ? 'active' : ''} onClick={() => { setActiveTab('returns'); loadReturnRequests(); }}><RefreshCw size={16}/> Returns <span>{returnRequests.filter(item=>item.status==='pending').length}</span><button className={activeTab === 'coupons' ? 'active' : ''} onClick={() => { setActiveTab('coupons'); loadCoupons(); }}><Save size={16}/> Coupons <span>{coupons.filter(c=>c.is_active).length}</span></button></button></nav>
       {message && <div className="admin-message">{message}<button onClick={()=>setMessage('')}><X size={14}/></button></div>}
       {activeTab === 'sales' ? <section className="admin-sales-dashboard">
         <div className="admin-sales-note">Figures exclude internal test orders. Sales total below counts delivered orders only.</div>
@@ -398,7 +441,30 @@ export default function Admin() {
           </article>)}</div>}
       </section>
     
-      </> : activeTab === 'returns' ? <section className="admin-panel">
+      </> : activeTab === 'coupons' ? <section className="admin-panel">
+        <div className="admin-panel-heading"><div><span className="admin-panel-icon"><Save size={17}/></span><strong>Coupons & discounts</strong></div><button className="admin-link" onClick={loadCoupons}><RefreshCw size={13}/> Refresh</button></div>
+        <form className="admin-coupon-form" onSubmit={createCoupon}>
+          <strong>Create a coupon</strong>
+          <label>Coupon code<input required minLength={3} maxLength={32} value={couponCode} onChange={e=>setCouponCode(e.target.value.toUpperCase())} placeholder="e.g. PUASH10"/></label>
+          <div className="admin-coupon-grid">
+            <label>Discount type<select value={couponType} onChange={e=>setCouponType(e.target.value as 'percentage'|'fixed')}><option value="percentage">Percentage (%)</option><option value="fixed">Fixed amount (₹)</option></select></label>
+            <label>Discount value<input type="number" min="0.01" step="0.01" max={couponType==='percentage'?100:undefined} required value={couponValue} onChange={e=>setCouponValue(e.target.value)}/></label>
+            <label>Minimum order (₹)<input type="number" min="0" step="0.01" value={couponMinimum} onChange={e=>setCouponMinimum(e.target.value)}/></label>
+            <label>Maximum discount (₹)<input type="number" min="0.01" step="0.01" value={couponMaximum} onChange={e=>setCouponMaximum(e.target.value)} placeholder="No cap"/></label>
+            <label>Usage limit<input type="number" min="1" step="1" value={couponLimit} onChange={e=>setCouponLimit(e.target.value)} placeholder="Unlimited"/></label>
+            <label>Uses per customer<input type="number" min="1" step="1" required value={couponPerUser} onChange={e=>setCouponPerUser(e.target.value)}/></label>
+            <label>Expiry date<input type="datetime-local" value={couponExpiry} onChange={e=>setCouponExpiry(e.target.value)}/></label>
+          </div>
+          <button className="admin-link" type="submit" disabled={busy}><Plus size={14}/> Create coupon</button>
+        </form>
+        <div className="admin-coupon-list">
+          {busy ? <div className="admin-empty">Coupons load ho rahe hain…</div> : coupons.length===0 ? <div className="admin-empty">Abhi koi coupon nahi bana.</div> : coupons.map(c=><article className="admin-coupon-card" key={c.id}>
+            <div><strong>{c.code}</strong><small>{c.discount_type==='percentage'?c.discount_value+'% off':money(Number(c.discount_value))+' off'} · Min. {money(Number(c.min_order_amount))}</small><small>{c.usage_count}{c.usage_limit===null?'': ' / '+c.usage_limit} uses · {c.per_user_limit} per customer</small>{c.expires_at&&<small>Expires {new Date(c.expires_at).toLocaleString('en-IN')}</small>}</div>
+            <button className="admin-link" disabled={orderBusy===c.id} onClick={()=>toggleCoupon(c)}>{c.is_active?'Deactivate':'Activate'}</button>
+            <span className={'admin-customer-order-status '+(c.is_active?'status-delivered':'status-cancelled')}>{c.is_active?'Active':'Inactive'}</span>
+          </article>)}
+        </div>
+      </section> : activeTab === 'returns' ? <section className="admin-panel">
         <div className="admin-panel-heading"><div><span className="admin-panel-icon"><RefreshCw size={17}/></span><strong>Return requests <small>({returnRequests.length})</small></strong></div><button className="admin-link" onClick={loadReturnRequests}><RefreshCw size={13}/> Refresh</button></div>
         <p className="admin-shipping-help">Review customer requests. Approving a return does not automatically issue a refund; payment/refund must be handled separately.</p>
         {busy ? <div className="admin-empty">Return requests load ho rahi hain…</div> : returnRequests.length===0 ? <div className="admin-empty">Abhi koi return request nahi hai.</div> : <div className="admin-customer-list">{returnRequests.map(item=><article className="admin-customer-card" key={item.id}>
