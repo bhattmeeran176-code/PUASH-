@@ -48,6 +48,7 @@ export default function Account() {
   const [error, setError] = useState('');
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [savedProducts, setSavedProducts] = useState<any[]>([]);
+  const [recentProducts, setRecentProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const ordersRef = useRef<CustomerOrder[]>([]);
   const [ordersBusy, setOrdersBusy] = useState(false);
@@ -57,8 +58,16 @@ export default function Account() {
   const [editingAddress, setEditingAddress] = useState<string | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
 
+  const loadRecentlyViewed = () => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('puash-recently-viewed') || '[]');
+      setRecentProducts(Array.isArray(stored) ? stored.filter((item: any) => item?.id).slice(0, 8) : []);
+    } catch { setRecentProducts([]); }
+  };
+
   const loadProfile = async (current: any) => {
     setUser(current);
+    loadRecentlyViewed();
     if (current) {
       const [{ data, error: profileError }, { data: addressData, error: addressError }, { data: orderData, error: orderError }, { data: wishlistData, error: wishlistError }] = await Promise.all([
         supabase.from('profiles').select('full_name').eq('id', current.id).maybeSingle(),
@@ -272,6 +281,18 @@ export default function Account() {
               {product.image_url ? <img src={product.image_url} alt={product.name}/> : <div className="account-wishlist-placeholder">🛍️</div>}
               <strong>{product.name}</strong><span>₹{Number(product.price).toLocaleString('en-IN')}</span>
               <div><a href={'/product/'+product.id}>View product</a><button type="button" onClick={async()=>{const {error:removeError}=await supabase.from('wishlists').delete().eq('product_id',product.id).eq('user_id',user.id);if(removeError)setError('Wishlist se remove nahi hua: '+removeError.message);else setSavedProducts(items=>items.filter(item=>item.id!==product.id));}}>Remove</button></div>
+            </article>)}</div>}
+        </section>
+        <section className="account-wishlist recent-viewed-section">
+          <div className="address-book-heading"><div><Package size={18}/><strong>Recently viewed</strong><span className="customer-order-count">{recentProducts.length}</span></div>
+            {recentProducts.length > 0 && <button type="button" className="address-add" onClick={() => { localStorage.removeItem('puash-recently-viewed'); setRecentProducts([]); }}>Clear</button>}
+          </div>
+          <p className="address-hint">Jo products aapne haal hi mein dekhe, woh yahan hain.</p>
+          {recentProducts.length===0 ? <div className="address-empty">Abhi koi recently viewed product nahi hai. Store par products dekhein.</div> :
+            <div className="account-wishlist-grid">{recentProducts.map(product=><article className="account-wishlist-item" key={product.id}>
+              {product.image_url ? <img src={product.image_url} alt={product.name}/> : <div className="account-wishlist-placeholder">🛍️</div>}
+              <strong>{product.name}</strong><span>₹{Number(product.price).toLocaleString('en-IN')}</span>
+              <div><a href={'/product/'+product.id}>View product</a></div>
             </article>)}</div>}
         </section>
         <section className="customer-orders">
