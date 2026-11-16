@@ -72,10 +72,44 @@ function App() {
   const [checkoutError, setCheckoutError] = useState('');
   const [placingOrder, setPlacingOrder] = useState(false);
   const [toast, setToast] = useState('');
+  const [wishlist, setWishlist] = useState<string[]>([]);
+  const [wishlistBusy, setWishlistBusy] = useState<string | null>(null);
 
   useEffect(() => {
     localStorage.setItem('puash-cart', JSON.stringify(cart));
   }, [cart]);
+
+  useEffect(() => {
+    let active = true;
+    const loadWishlist = async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) { if (active) setWishlist([]); return; }
+      const { data } = await supabase.from('wishlists').select('product_id').eq('user_id', auth.user.id);
+      if (active) setWishlist((data || []).map((row: any) => row.product_id));
+    };
+    loadWishlist();
+    const { data: listener } = supabase.auth.onAuthStateChange(() => { void loadWishlist(); });
+    return () => { active = false; listener.subscription.unsubscribe(); };
+  }, []);
+
+  const toggleWishlist = async (product: Product) => {
+    if (wishlistBusy) return;
+    setWishlistBusy(product.id);
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) {
+      setWishlistBusy(null);
+      window.location.href = '/account';
+      return;
+    }
+    const saved = wishlist.includes(product.id);
+    const result = saved
+      ? await supabase.from('wishlists').delete().eq('user_id', auth.user.id).eq('product_id', product.id)
+      : await supabase.from('wishlists').insert({ user_id: auth.user.id, product_id: product.id });
+    setWishlistBusy(null);
+    if (result.error) { setToast('Wishlist update nahi hui. Dobara try karein.'); return; }
+    setWishlist(current => saved ? current.filter(id => id !== product.id) : [...current, product.id]);
+    setToast(saved ? 'Wishlist se remove ho gaya' : 'Wishlist mein save ho gaya');
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -505,6 +539,14 @@ function App() {
                 );
                 return (
                   <article className="product-card" key={product.id}>
+                    <article className="product-card" key={product.id}>
+                    <button
+                      type="button"
+                      className={'wishlist-heart ' + (wishlist.includes(product.id) ? 'saved' : '')}
+                      onClick={() => void toggleWishlist(product)}
+                      aria-label={wishlist.includes(product.id) ? 'Remove from wishlist' : 'Save to wishlist'}
+                      title={wishlist.includes(product.id) ? 'Saved' : 'Save for later'}
+                    ><Heart size={17} fill={wishlist.includes(product.id) ? 'currentColor' : 'none'}/></button>
                     <button
                       className="product-visual"
                       onClick={() => { window.location.href = '/product/' + product.id; }}
