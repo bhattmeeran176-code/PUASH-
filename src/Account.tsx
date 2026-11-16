@@ -159,7 +159,7 @@ export default function Account() {
     else {
       setMessage('Return request submit ho gayi. PUASH team review karegi.');
       const { data, error: reloadError } = await supabase.from('orders')
-        .select('id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,created_at,courier_name,tracking_number,shipped_at,delivered_at,order_items(id,product_name,unit_price,quantity),order_return_requests(id,reason,details,status,admin_note,requested_at)'')
+        .select('id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,created_at,courier_name,tracking_number,shipped_at,delivered_at,order_items(id,product_name,unit_price,quantity),order_return_requests(id,reason,details,status,admin_note,requested_at)')
         .eq('id', order.id).eq('user_id', user.id).single();
       if (!reloadError && data) {
         ordersRef.current = ordersRef.current.map(item => item.id === order.id ? data as CustomerOrder : item);
