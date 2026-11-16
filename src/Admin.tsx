@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { supabase } from './supabase';
-import { ArrowLeft, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X } from 'lucide-react';
+import { ArrowLeft, BarChart3, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X, AlertTriangle, TrendingUp } from 'lucide-react';
 
 type Category = { id: string; name: string };
 type OrderItem = { id: string; product_name: string; unit_price: number; quantity: number };
@@ -28,7 +28,7 @@ export default function Admin() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [activeTab, setActiveTab] = useState<'products' | 'orders'>('products');
+  const [activeTab, setActiveTab] = useState<'sales' | 'products' | 'orders'>('sales');
   const [orderBusy, setOrderBusy] = useState<string | null>(null);
   const [productSearch, setProductSearch] = useState('');
   const [orderSearch, setOrderSearch] = useState('');
@@ -187,6 +187,24 @@ export default function Admin() {
     if (error) setMessage(error.message); else await loadData();
   };
 
+  const genuineOrders = orders.filter(order => !(order.customer_note || '').startsWith('INTERNAL TEST ORDER'));
+  const nonCancelledOrders = genuineOrders.filter(order => order.status !== 'cancelled');
+  const deliveredOrders = genuineOrders.filter(order => order.status === 'delivered');
+  const deliveredSales = deliveredOrders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+  const orderValue = nonCancelledOrders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+  const unitsSold = nonCancelledOrders.reduce((sum, order) => sum + (order.order_items || []).reduce((n, item) => n + Number(item.quantity || 0), 0), 0);
+  const statusCounts = ['pending','confirmed','processing','shipped','delivered','cancelled'].map(status => ({
+    status, count: genuineOrders.filter(order => order.status === status).length,
+  }));
+  const bestSellers = Object.values(nonCancelledOrders.flatMap(order => order.order_items || []).reduce((acc: Record<string, {name:string; quantity:number; revenue:number}>, item) => {
+    const key = item.product_name;
+    if (!acc[key]) acc[key] = { name: key, quantity: 0, revenue: 0 };
+    acc[key].quantity += Number(item.quantity || 0);
+    acc[key].revenue += Number(item.unit_price || 0) * Number(item.quantity || 0);
+    return acc;
+  }, {})).sort((a,b) => b.quantity - a.quantity).slice(0,5);
+  const lowStockProducts = products.filter(product => product.stock_quantity <= 5).sort((a,b) => a.stock_quantity - b.stock_quantity);
+
   if (!sessionReady) return <div className="admin-screen"><div className="admin-loading">PUASH Admin load ho raha hai…</div></div>;
 
   if (!user || !isAdmin) return (
@@ -212,10 +230,33 @@ export default function Admin() {
   return <div className="admin-screen">
     <header className="admin-header"><a href="/" className="admin-brand"><span>PUASH.</span><small>ADMIN</small></a><button className="admin-logout" onClick={()=>supabase.auth.signOut()}><LogOut size={16}/> Sign out</button></header>
     <main className="admin-main">
-      <div className="admin-title-row"><div><div className="admin-kicker">STORE CONTROL</div><h1>{activeTab === 'products' ? 'Products' : 'Orders'}</h1><p>{activeTab === 'products' ? 'Add, edit and publish products on your PUASH store.' : 'Review customer orders and update their fulfilment status.'}</p></div><button className="admin-refresh" onClick={() => activeTab === 'products' ? loadData() : loadOrders()}><RefreshCw size={16}/> Refresh</button></div>
-      <nav className="admin-tabs"><button className={activeTab === 'products' ? 'active' : ''} onClick={() => setActiveTab('products')}><Package size={16}/> Products <span>{products.length}</span></button><button className={activeTab === 'orders' ? 'active' : ''} onClick={() => setActiveTab('orders')}><ClipboardList size={16}/> Orders <span>{orders.length}</span></button></nav>
+      <div className="admin-title-row"><div><div className="admin-kicker">STORE CONTROL</div><h1>{activeTab === 'sales' ? 'Sales dashboard' : activeTab === 'products' ? 'Products' : 'Orders'}</h1><p>{activeTab === 'sales' ? 'Your store performance at a glance.' : activeTab === 'products' ? 'Add, edit and publish products on your PUASH store.' : 'Review customer orders and update their fulfilment status.'}</p></div><button className="admin-refresh" onClick={() => { loadData(); loadOrders(); }}><RefreshCw size={16}/> Refresh</button></div>
+      <nav className="admin-tabs"><button className={activeTab === 'sales' ? 'active' : ''} onClick={() => setActiveTab('sales')}><BarChart3 size={16}/> Dashboard</button><button className={activeTab === 'products' ? 'active' : ''} onClick={() => setActiveTab('products')}><Package size={16}/> Products <span>{products.length}</span></button><button className={activeTab === 'orders' ? 'active' : ''} onClick={() => setActiveTab('orders')}><ClipboardList size={16}/> Orders <span>{genuineOrders.length}</span></button></nav>
       {message && <div className="admin-message">{message}<button onClick={()=>setMessage('')}><X size={14}/></button></div>}
-      {activeTab === 'products' ? <>
+      {activeTab === 'sales' ? <section className="admin-sales-dashboard">
+        <div className="admin-sales-note">Figures exclude internal test orders. Sales total below counts delivered orders only.</div>
+        <div className="admin-sales-metrics">
+          <article><span><ClipboardList size={17}/> Total orders</span><strong>{genuineOrders.length}</strong><small>Including cancelled orders</small></article>
+          <article><span><TrendingUp size={17}/> Delivered sales</span><strong>{money(deliveredSales)}</strong><small>{deliveredOrders.length} delivered orders</small></article>
+          <article><span><Package size={17}/> Order value</span><strong>{money(orderValue)}</strong><small>All non-cancelled orders</small></article>
+          <article><span><BarChart3 size={17}/> Units ordered</span><strong>{unitsSold}</strong><small>Across non-cancelled orders</small></article>
+        </div>
+        <section className="admin-panel">
+          <div className="admin-panel-heading"><div><span className="admin-panel-icon"><ClipboardList size={17}/></span><strong>Order status overview</strong></div></div>
+          <div className="admin-status-grid">{statusCounts.map(item=><div key={item.status}><span>{item.status.charAt(0).toUpperCase()+item.status.slice(1)}</span><strong>{item.count}</strong></div>)}</div>
+        </section>
+        <div className="admin-sales-columns">
+          <section className="admin-panel">
+            <div className="admin-panel-heading"><div><span className="admin-panel-icon"><TrendingUp size={17}/></span><strong>Best-selling products</strong></div></div>
+            {bestSellers.length===0 ? <div className="admin-empty">Abhi sales data available nahi hai.</div> : <div className="admin-sales-list">{bestSellers.map((item,index)=><div key={item.name}><span className="admin-sales-rank">{index+1}</span><div><strong>{item.name}</strong><small>{item.quantity} units ordered</small></div><b>{money(item.revenue)}</b></div>)}</div>}
+          </section>
+          <section className="admin-panel">
+            <div className="admin-panel-heading"><div><span className="admin-panel-icon"><AlertTriangle size={17}/></span><strong>Low-stock products</strong></div><span className="admin-low-count">{lowStockProducts.length}</span></div>
+            {lowStockProducts.length===0 ? <div className="admin-empty">Koi low-stock product nahi hai.</div> : <div className="admin-sales-list">{lowStockProducts.slice(0,8).map(product=><div key={product.id}><span className="admin-low-dot"><AlertTriangle size={14}/></span><div><strong>{product.name}</strong><small>{product.is_active ? 'Published' : 'Hidden'}</small></div><b>{product.stock_quantity} left</b></div>)}</div>}
+            {lowStockProducts.length>8 && <p className="admin-sales-footnote">Aur {lowStockProducts.length-8} products low stock mein hain. Products tab mein full list dekhein.</p>}
+          </section>
+        </div>
+      </section> : activeTab === 'products' ? <>
 <section className="admin-panel">
         <div className="admin-panel-heading"><div><span className="admin-panel-icon"><Package size={17}/></span><strong>{editing ? 'Edit product' : 'Add a product'}</strong></div>{editing && <button className="admin-link" onClick={resetForm}>Cancel edit</button>}</div>
         <form className="admin-form admin-product-form" onSubmit={saveProduct}>
