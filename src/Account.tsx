@@ -15,6 +15,8 @@ type CustomerOrder = {
   tracking_number: string | null;
   shipped_at: string | null;
   delivered_at: string | null;
+  coupon_code: string | null;
+  discount_amount: number;
   order_return_requests?: { id: string; reason: string; details: string | null; status: string; admin_note: string | null; requested_at: string }[];
   order_items: { id: string; product_name: string; unit_price: number; quantity: number }[];
 };
@@ -79,7 +81,7 @@ export default function Account() {
       const [{ data, error: profileError }, { data: addressData, error: addressError }, { data: orderData, error: orderError }, { data: wishlistData, error: wishlistError }] = await Promise.all([
         supabase.from('profiles').select('full_name').eq('id', current.id).maybeSingle(),
         supabase.from('customer_addresses').select('*').eq('user_id', current.id).order('is_default', { ascending: false }).order('created_at', { ascending: false }),
-        supabase.from('orders').select('id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,created_at,courier_name,tracking_number,shipped_at,delivered_at,order_items(id,product_name,unit_price,quantity),order_return_requests(id,reason,details,status,admin_note,requested_at)').eq('user_id', current.id).order('created_at', { ascending: false }).limit(30),
+        supabase.from('orders').select('id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,created_at,courier_name,tracking_number,shipped_at,delivered_at,coupon_code,discount_amount,order_items(id,product_name,unit_price,quantity),order_return_requests(id,reason,details,status,admin_note,requested_at)').eq('user_id', current.id).order('created_at', { ascending: false }).limit(30),
         supabase.from('wishlists').select('id,product_id,products(id,name,price,image_url,stock_quantity,is_active)').eq('user_id', current.id).order('created_at', { ascending: false }),
       ]);
       if (profileError) setError('Profile load nahi hua: ' + profileError.message);
@@ -396,6 +398,7 @@ export default function Account() {
                 {expandedOrderId===order.id && <div className="customer-order-details">
                   <div><span>Subtotal</span><strong>₹{Number(order.subtotal_amount ?? order.total_amount).toLocaleString('en-IN')}</strong></div>
                   <div><span>Delivery fee</span><strong>{Number(order.delivery_fee)===0?'Free':'₹'+Number(order.delivery_fee).toLocaleString('en-IN')}</strong></div>
+                  {Number(order.discount_amount||0)>0 && <div className="customer-order-discount"><span>Coupon {order.coupon_code ? '('+order.coupon_code+')' : ''}</span><strong>−₹{Number(order.discount_amount).toLocaleString('en-IN')}</strong></div>}
                   <div><span>Payment method</span><strong>{order.payment_method==='cash_on_delivery'?'Cash on Delivery':order.payment_method}</strong></div>
                   <div className="customer-order-full-address"><span>Delivery address</span><strong>{[order.shipping_address?.full_name,order.shipping_address?.phone,order.shipping_address?.line1,order.shipping_address?.line2,order.shipping_address?.city,order.shipping_address?.state,order.shipping_address?.postal_code,order.shipping_address?.country].filter(Boolean).join(', ') || 'Address details unavailable'}</strong></div>
                 </div>}
