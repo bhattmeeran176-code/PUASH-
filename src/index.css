@@ -1990,3 +1990,11 @@ main {
 .admin-shipping-editor>small{font-size:9px;color:var(--muted)}
 .admin-shipping-editor .admin-link{align-self:flex-start}
 @media(max-width:420px){.admin-shipping-fields{grid-template-columns:1fr}}
+
+
+.customer-shipping-info{margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:7px;background:#f8faf8;display:flex;flex-direction:column;gap:8px}
+.customer-shipping-info>strong{display:flex;align-items:center;gap:7px;font-size:12px}
+.customer-shipping-info>div{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;font-size:11px}
+.customer-shipping-info>div span{color:var(--muted)}
+.customer-shipping-info>div b{text-align:right;overflow-wrap:anywhere}
+.customer-shipping-info>small{font-size:10px;line-height:1.5;color:var(--muted);padding-top:4px}
