@@ -1,0 +1,65 @@
+[
+  {
+    "name": "Add products and complete a demo checkout",
+    "sanity": true,
+    "viewport": "mobile",
+    "covers": [
+      "product catalog",
+      "add to cart",
+      "quantity controls",
+      "cart subtotal and delivery",
+      "demo checkout and order confirmation"
+    ],
+    "description": "Verifies a shopper can add an item, change quantity and finish the clearly labelled demo checkout.",
+    "steps": [
+      "Tap Add to cart on Everyday Wireless Earbuds",
+      "Open the cart and increase its quantity to 2",
+      "Continue to checkout and confirm the demo order"
+    ],
+    "expected": "The cart shows two earbuds with the correct total, then a demo order confirmation appears with an order ID and a note that no real order was sent."
+  },
+  {
+    "name": "Search and filter the product catalog",
+    "viewport": "desktop",
+    "covers": [
+      "product search",
+      "category filtering",
+      "empty search results",
+      "clear search"
+    ],
+    "description": "Verifies search narrows the catalog and category filters show matching products.",
+    "steps": [
+      "Search for 'hoodie'",
+      "Verify Classic Cotton Hoodie is shown",
+      "Clear search and select the Home category"
+    ],
+    "expected": "The hoodie appears for the search, and the Home category displays home products only."
+  },
+  {
+    "name": "Keep the shopping cart after a page refresh",
+    "viewport": "mobile",
+    "covers": [
+      "cart persistence in this browser",
+      "cart badge",
+      "cart item display after reload"
+    ],
+    "description": "Verifies the prototype keeps cart contents on the same device after a page reload.",
+    "steps": [
+      "Add Insulated Travel Bottle to the cart",
+      "Refresh the page",
+      "Open the cart"
+    ],
+    "expected": "The cart still contains one Insulated Travel Bottle after refresh."
+  },
+  {
+    "name": "Prevent checkout when the cart is empty",
+    "viewport": "desktop",
+    "covers": ["empty cart state", "empty cart checkout guardrail"],
+    "description": "Verifies an empty cart presents a continue-shopping action rather than an order action.",
+    "steps": [
+      "Open the cart without adding products",
+      "Review the empty cart state"
+    ],
+    "expected": "The cart says it is waiting and offers Continue shopping; no checkout button or order is available."
+  }
+]
