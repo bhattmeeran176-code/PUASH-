@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { supabase } from './supabase';
 import {
   ArrowRight,
   Check,
@@ -23,7 +24,7 @@ import {
 } from 'lucide-react';
 
 type Product = {
-  id: number;
+  id: string;
   name: string;
   category: string;
   price: number;
@@ -36,7 +37,7 @@ type Product = {
   description: string;
 };
 
-const products: Product[] = [
+const sampleProducts: Product[] = [
   {
     id: 1,
     name: 'Everyday Wireless Earbuds',
@@ -144,7 +145,7 @@ const products: Product[] = [
   },
 ];
 
-const categories = [
+const sampleCategories = [
   { name: 'All', emoji: '✨' },
   { name: 'Electronics', emoji: '🎧' },
   { name: 'Fashion', emoji: '👕' },
@@ -157,9 +158,11 @@ const money = (value: number) => '₹' + value.toLocaleString('en-IN');
 
 function App() {
   const [category, setCategory] = useState('All');
+  const [products, setProducts] = useState<Product[]>(sampleProducts);
+  const [categories, setCategories] = useState(sampleCategories);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('featured');
-  const [cart, setCart] = useState<Record<number, number>>(() => {
+  const [cart, setCart] = useState<Record<string, number>>(() => {
     try {
       return JSON.parse(localStorage.getItem('puash-cart') || '{}');
     } catch {
@@ -175,6 +178,67 @@ function App() {
   useEffect(() => {
     localStorage.setItem('puash-cart', JSON.stringify(cart));
   }, [cart]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadStoreData() {
+      const [productResult, categoryResult] = await Promise.all([
+        supabase
+          .from('products')
+          .select('id,name,description,price,compare_at_price,image_url,categories(name)')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('categories')
+          .select('id,name,slug')
+          .eq('is_active', true)
+          .order('name'),
+      ]);
+
+      if (cancelled) return;
+      if (productResult.error) {
+        console.warn('PUASH products could not be loaded:', productResult.error.message);
+      } else if (productResult.data?.length) {
+        const liveProducts: Product[] = productResult.data.map((row: any) => {
+          const relation = Array.isArray(row.categories) ? row.categories[0] : row.categories;
+          const productCategory = relation?.name || 'Other';
+          const emojiByCategory: Record<string, string> = {
+            Electronics: '🎧', Fashion: '🧥', Home: '🏡', Beauty: '🌸', Grocery: '🥬',
+          };
+          return {
+            id: row.id,
+            name: row.name,
+            category: productCategory,
+            price: Number(row.price),
+            mrp: Number(row.compare_at_price ?? row.price),
+            rating: 0,
+            reviews: 0,
+            emoji: emojiByCategory[productCategory] || '🛍️',
+            tone: 'cream',
+            description: row.description || 'Discover this product on PUASH.',
+          };
+        });
+        setProducts(liveProducts);
+      }
+
+      if (!categoryResult.error && categoryResult.data?.length) {
+        const emojiByCategory: Record<string, string> = {
+          Electronics: '🎧', Fashion: '👕', Home: '🏡', Beauty: '🌸', Grocery: '🥬',
+        };
+        setCategories([
+          { name: 'All', emoji: '✨' },
+          ...categoryResult.data.map((item: any) => ({
+            name: item.name,
+            emoji: emojiByCategory[item.name] || '🛍️',
+          })),
+        ]);
+      } else if (categoryResult.error) {
+        console.warn('PUASH categories could not be loaded:', categoryResult.error.message);
+      }
+    }
+    loadStoreData();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (!toast) return;
