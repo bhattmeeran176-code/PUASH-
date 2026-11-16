@@ -20,6 +20,7 @@ import {
   Sparkles,
   Star,
   UserRound,
+  Truck,
   X,
 } from 'lucide-react';
 
