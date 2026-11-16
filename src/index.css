@@ -1794,3 +1794,7 @@ main {
   margin: 12px 0;
 }
 .customer-order-destination { margin: 10px 0 0; }
+
+.admin-test-order{display:grid;gap:5px;padding:10px 12px;border:1px solid #e6b6a8;border-radius:9px;background:#fff1ec;color:#8d3827}
+.admin-test-order strong{font-size:11px;letter-spacing:.04em}
+.admin-test-order span{font-size:12px}
