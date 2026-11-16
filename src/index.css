@@ -1980,3 +1980,13 @@ main {
 
 .admin-order-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 @media(max-width:420px){.admin-order-tools{gap:8px}.admin-order-tools .admin-link{font-size:9px}}
+
+
+/* Shipping details editor */
+.admin-shipping-editor{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:7px;background:#fcfbf8;display:flex;flex-direction:column;gap:9px}
+.admin-shipping-editor>strong{font-size:11px}
+.admin-shipping-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.admin-shipping-fields input{width:100%;min-width:0;padding:10px;border:1px solid var(--line);border-radius:5px;background:white;color:var(--ink);font:inherit;font-size:11px}
+.admin-shipping-editor>small{font-size:9px;color:var(--muted)}
+.admin-shipping-editor .admin-link{align-self:flex-start}
+@media(max-width:420px){.admin-shipping-fields{grid-template-columns:1fr}}
