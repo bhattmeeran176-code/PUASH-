@@ -255,7 +255,7 @@ export default function Admin() {
               <span>Delivery <b>{Number(order.delivery_fee || 0) === 0 ? 'Free' : money(Number(order.delivery_fee))}</b></span>
               <span>Payment <b>{order.payment_method === 'cash_on_delivery' ? 'Cash on Delivery' : order.payment_method}</b></span>
             </div>
-            {order.customer_note && <p className="admin-order-note">Note: {order.customer_note}</p>}
+            {order.customer_note && (order.customer_note.startsWith('INTERNAL TEST ORDER') ? <p className="admin-order-note admin-test-order"><strong>INTERNAL TEST ORDER — DO NOT FULFIL</strong><span>{order.customer_note}</span></p> : <p className="admin-order-note">Note: {order.customer_note}</p>)}
             <div className="admin-order-actions"><span className={'admin-status ' + (order.status === 'delivered' ? 'live' : '')}>{order.status}</span><select value={order.status} disabled={orderBusy === order.id} onChange={e => updateOrderStatus(order.id,e.target.value)} aria-label="Update order status">{['pending','confirmed','processing','shipped','delivered','cancelled'].map(status => <option key={status} value={status}>{status.charAt(0).toUpperCase()+status.slice(1)}</option>)}</select>{orderBusy === order.id && <small>Saving…</small>}</div>
           </article>;
         })}</div>}
