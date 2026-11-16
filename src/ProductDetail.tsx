@@ -78,13 +78,19 @@ export default function ProductDetail() {
       if (cancelled) return;
       if (!error && data) {
         const category = Array.isArray(data.categories) ? data.categories[0]?.name : data.categories?.name;
-        setProduct({
+        const viewedProduct = {
           id: data.id, name: data.name,
           description: data.description || 'Discover this product on PUASH.',
           price: Number(data.price), mrp: Number(data.compare_at_price ?? data.price),
           imageUrl: data.image_url || null, stock: Number(data.stock_quantity || 0),
           category: category || 'Other',
-        });
+        };
+        setProduct(viewedProduct);
+        try {
+          const current = JSON.parse(localStorage.getItem('puash-recently-viewed') || '[]');
+          const item = { id: viewedProduct.id, name: viewedProduct.name, price: viewedProduct.price, image_url: viewedProduct.imageUrl, category: viewedProduct.category };
+          localStorage.setItem('puash-recently-viewed', JSON.stringify([item, ...current.filter((entry: any) => entry?.id !== item.id)].slice(0, 8)));
+        } catch { /* Ignore unavailable browser storage. */ }
       }
       setLoading(false);
     }
