@@ -1,0 +1,5 @@
+/*
+  Cloudflare Pages SPA fallback: serve the React entry point for client-side routes
+  such as /account, /admin and /product/:id.
+*/
+/* /index.html 200
