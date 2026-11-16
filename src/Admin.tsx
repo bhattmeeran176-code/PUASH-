@@ -4,7 +4,7 @@ import { ArrowLeft, BarChart3, ClipboardList, LogOut, Package, Plus, RefreshCw, 
 
 type Category = { id: string; name: string };
 type OrderItem = { id: string; product_name: string; unit_price: number; quantity: number };
-type Order = { id: string; user_id: string; status: string; total_amount: number; subtotal_amount: number | null; delivery_fee: number; payment_method: string; shipping_address: any; customer_note: string | null; created_at: string; order_items: OrderItem[] };
+type Order = { id: string; user_id: string; status: string; total_amount: number; subtotal_amount: number | null; delivery_fee: number; payment_method: string; shipping_address: any; customer_note: string | null; created_at: string; courier_name: string | null; tracking_number: string | null; shipped_at: string | null; delivered_at: string | null; order_items: OrderItem[] };
 type Customer = { customer_id: string; email: string | null; full_name: string | null; joined_at: string; order_count: number; delivered_spend: number };
 type Product = {
   id: string; name: string; slug: string; description: string | null;
@@ -35,6 +35,7 @@ export default function Admin() {
   const [customerLoading, setCustomerLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'sales' | 'products' | 'orders' | 'customers'>('sales');
   const [orderBusy, setOrderBusy] = useState<string | null>(null);
+  const [shippingDrafts, setShippingDrafts] = useState<Record<string, { courier: string; tracking: string }>>({});
   const [productSearch, setProductSearch] = useState('');
   const [orderSearch, setOrderSearch] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState('all');
@@ -124,7 +125,7 @@ export default function Admin() {
 
   const loadOrders = async () => {
     const { data, error } = await supabase.from('orders')
-      .select('id,user_id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,customer_note,created_at,order_items(id,product_name,unit_price,quantity)')
+      .select('id,user_id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,customer_note,created_at,courier_name,tracking_number,shipped_at,delivered_at,order_items(id,product_name,unit_price,quantity)')
       .order('created_at', { ascending: false });
     if (error) setMessage('Orders load nahi hue: ' + error.message);
     else setOrders((data || []) as Order[]);
@@ -136,6 +137,18 @@ export default function Admin() {
     if (error) setMessage('Customers load nahi hue: ' + error.message);
     else setCustomers((data || []) as Customer[]);
     setCustomerLoading(false);
+  };
+
+  const saveShippingDetails = async (order: Order) => {
+    const draft = shippingDrafts[order.id] || { courier: order.courier_name || '', tracking: order.tracking_number || '' };
+    setOrderBusy(order.id); setMessage('');
+    const { error } = await supabase.from('orders').update({
+      courier_name: draft.courier.trim() || null,
+      tracking_number: draft.tracking.trim() || null,
+    }).eq('id', order.id);
+    setOrderBusy(null);
+    if (error) setMessage('Shipping details save nahi hue: ' + error.message);
+    else { setMessage('Shipping details save ho gaye.'); await loadOrders(); }
   };
 
   const updateOrderStatus = async (orderId: string, status: string) => {
@@ -403,6 +416,15 @@ export default function Admin() {
             </div>
             {order.customer_note && (order.customer_note.startsWith('INTERNAL TEST ORDER') ? <p className="admin-order-note admin-test-order"><strong>INTERNAL TEST ORDER — DO NOT FULFIL</strong><span>{order.customer_note}</span></p> : <p className="admin-order-note">Note: {order.customer_note}</p>)}
             <div className="admin-order-actions"><span className={'admin-status ' + (order.status === 'delivered' ? 'live' : '')}>{order.status}</span><select value={order.status} disabled={orderBusy === order.id} onChange={e => updateOrderStatus(order.id,e.target.value)} aria-label="Update order status">{['pending','confirmed','processing','shipped','delivered','cancelled'].map(status => <option key={status} value={status}>{status.charAt(0).toUpperCase()+status.slice(1)}</option>)}</select>{orderBusy === order.id && <small>Saving…</small>}</div>
+            <div className="admin-shipping-editor">
+              <strong>Shipping details</strong>
+              <div className="admin-shipping-fields">
+                <input value={(shippingDrafts[order.id]?.courier ?? order.courier_name) || ''} onChange={e=>setShippingDrafts(prev=>({...prev,[order.id]:{courier:e.target.value,tracking:prev[order.id]?.tracking ?? order.tracking_number ?? ''}}))} placeholder="Courier / delivery partner" aria-label="Courier name"/>
+                <input value={(shippingDrafts[order.id]?.tracking ?? order.tracking_number) || ''} onChange={e=>setShippingDrafts(prev=>({...prev,[order.id]:{courier:prev[order.id]?.courier ?? order.courier_name ?? '',tracking:e.target.value}}))} placeholder="Tracking / AWB number" aria-label="Tracking number"/>
+              </div>
+              <button className="admin-link" disabled={orderBusy===order.id} onClick={()=>saveShippingDetails(order)}><Save size={13}/> Save shipping details</button>
+              {(order.shipped_at || order.delivered_at) && <small>{order.shipped_at ? 'Dispatched: '+new Date(order.shipped_at).toLocaleString('en-IN') : ''}{order.delivered_at ? ' · Delivered: '+new Date(order.delivered_at).toLocaleString('en-IN') : ''}</small>}
+            </div>
           </article>;
         })}</div>}
         {orders.length > 0 && orders.filter(order => { const address=order.shipping_address || {}; const haystack=[order.id,address.full_name,address.phone,address.postal_code,address.city].join(' ').toLowerCase(); return (orderStatusFilter==='all'||order.status===orderStatusFilter)&&haystack.includes(orderSearch.trim().toLowerCase()); }).length===0 && <div className="admin-empty">Is search ya status ke liye koi order nahi mila.</div>}
