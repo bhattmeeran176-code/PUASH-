@@ -1833,3 +1833,13 @@ main {
 .order-live-notice{display:flex;align-items:center;gap:9px;padding:11px 13px;margin:0 0 14px;border:1px solid #cbdcc9;border-radius:8px;background:#eef5ec;color:#365b40;font-size:12px;line-height:1.5}
 .order-live-notice span{flex:1}
 .order-live-notice button{border:0;background:transparent;color:inherit;display:grid;place-items:center;padding:3px}
+
+
+/* Expandable customer order details */
+.customer-order-details-toggle{display:inline-flex;align-items:center;gap:7px;margin-top:12px;padding:8px 0;border:0;background:transparent;color:#a85c40;font:inherit;font-size:11px;font-weight:700;cursor:pointer}
+.customer-order-details{display:grid;gap:9px;margin-top:5px;padding:12px;border-radius:9px;background:#f7f5ef}
+.customer-order-details>div{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;font-size:11px}
+.customer-order-details span{flex:0 0 105px;color:#827c70}
+.customer-order-details strong{color:#302f2a;text-align:right;overflow-wrap:anywhere;line-height:1.5}
+.customer-order-details .customer-order-full-address{display:grid;gap:5px;padding-top:8px;border-top:1px solid #e8e2d8}
+.customer-order-details .customer-order-full-address strong{text-align:left}
