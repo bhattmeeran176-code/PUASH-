@@ -308,7 +308,7 @@ export default function Account() {
             <button type="button" className="address-add" disabled={ordersBusy} onClick={async()=>{
               if (!user) return;
               setOrdersBusy(true);
-              const {data,error:loadError}=await supabase.from('orders').select('id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,created_at,order_items(id,product_name,unit_price,quantity)').eq('user_id',user.id).order('created_at',{ascending:false}).limit(30);
+              const {data,error:loadError}=await supabase.from('orders').select('id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,created_at,courier_name,tracking_number,shipped_at,delivered_at,order_items(id,product_name,unit_price,quantity)').eq('user_id',user.id).order('created_at',{ascending:false}).limit(30);
               setOrdersBusy(false);
               if(loadError) setError('Orders refresh nahi huye: '+loadError.message);
               else { ordersRef.current = (data||[]) as CustomerOrder[]; setOrders(ordersRef.current); }
