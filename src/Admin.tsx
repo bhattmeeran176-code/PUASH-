@@ -30,6 +30,7 @@ export default function Admin() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [activeTab, setActiveTab] = useState<'products' | 'orders'>('products');
   const [orderBusy, setOrderBusy] = useState<string | null>(null);
+  const [productSearch, setProductSearch] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -110,9 +111,27 @@ export default function Admin() {
     else if (authMode === 'signup') setMessage('Account create ho gaya. Admin access activate hone ke baad dashboard open hoga.');
   };
 
+  const adjustStock = async (product: Product, change: number) => {
+    const nextStock = Math.max(0, product.stock_quantity + change);
+    setOrderBusy(product.id);
+    setMessage('');
+    const { error } = await supabase.from('products')
+      .update({ stock_quantity: nextStock, updated_at: new Date().toISOString() })
+      .eq('id', product.id);
+    setOrderBusy(null);
+    if (error) setMessage('Stock update nahi hua: ' + error.message);
+    else {
+      setProducts(current => current.map(item => item.id === product.id ? { ...item, stock_quantity: nextStock } : item));
+      setMessage('Stock update ho gaya.');
+    }
+  };
+
   const saveProduct = async (event: FormEvent) => {
     event.preventDefault();
-    if (!name.trim() || !price || Number(price) <= 0) { setMessage('Product name aur valid price required hain.'); return; }
+    if (!name.trim() || !price || !Number.isFinite(Number(price)) || Number(price) <= 0) { setMessage('Product name aur valid price required hain.'); return; }
+    if (comparePrice && (!Number.isFinite(Number(comparePrice)) || Number(comparePrice) < Number(price))) { setMessage('MRP compare price, selling price se zyada ya barabar hona chahiye.'); return; }
+    if (!Number.isInteger(Number(stock)) || Number(stock) < 0) { setMessage('Stock quantity 0 ya usse zyada whole number honi chahiye.'); return; }
+    if (imageFile && (!['image/jpeg', 'image/png', 'image/webp'].includes(imageFile.type) || imageFile.size > 5 * 1024 * 1024)) { setMessage('Image JPG, PNG ya WebP ho aur 5 MB se chhoti ho.'); return; }
     setBusy(true); setMessage('');
     let finalImage = imageUrl.trim() || null;
     if (imageFile) {
@@ -197,10 +216,13 @@ export default function Admin() {
       </section>
       <section className="admin-panel">
         <div className="admin-panel-heading"><div><span className="admin-panel-icon"><Package size={17}/></span><strong>Store catalogue <small>({products.length})</small></strong></div><button className="admin-link" onClick={loadData}>Refresh list</button></div>
+        <input className="admin-product-search" value={productSearch} onChange={e=>setProductSearch(e.target.value)} placeholder="Search products by name or category…" aria-label="Search products"/>
         {busy && products.length === 0 ? <div className="admin-empty">Loading products…</div> : products.length === 0 ? <div className="admin-empty">Abhi koi product nahi hai. Upar form se pehla product add karein.</div> :
-          <div className="admin-product-list">{products.map(p=><article className="admin-product-row" key={p.id}>
+          <div className="admin-product-list">{products.filter(p => (p.name + ' ' + (p.categories?.name || '')).toLowerCase().includes(productSearch.toLowerCase())).map(p=><article className="admin-product-row" key={p.id}>
             <div className="admin-thumb">{p.image_url ? <img src={p.image_url} alt=""/> : <Package size={22}/>}</div>
-            <div className="admin-product-copy"><strong>{p.name}</strong><small>{p.categories?.name || 'Uncategorised'} · Stock: {p.stock_quantity}</small><b>{money(p.price)} {p.compare_at_price ? <del>{money(p.compare_at_price)}</del> : null}</b></div>
+            <div className="admin-product-copy"><strong>{p.name}</strong><small>{p.categories?.name || 'Uncategorised'}</small><b>{money(p.price)} {p.compare_at_price ? <del>{money(p.compare_at_price)}</del> : null}</b>
+              <div className="admin-stock-control"><span className={p.stock_quantity <= 5 ? 'admin-stock-low' : ''}>Stock: {p.stock_quantity}{p.stock_quantity <= 5 ? ' · Low stock' : ''}</span><button disabled={orderBusy===p.id || p.stock_quantity<=0} onClick={()=>adjustStock(p,-1)} aria-label="Decrease stock">−</button><button disabled={orderBusy===p.id} onClick={()=>adjustStock(p,1)} aria-label="Increase stock">+</button></div>
+            </div>
             <span className={p.is_active ? 'admin-status live' : 'admin-status'}>{p.is_active ? 'Live' : 'Hidden'}</span>
             <div className="admin-row-actions"><button onClick={()=>editProduct(p)}>Edit</button><button onClick={()=>toggleActive(p)}>{p.is_active ? 'Hide' : 'Publish'}</button></div>
           </article>)}</div>}
