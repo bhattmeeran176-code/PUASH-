@@ -85,7 +85,6 @@ function App() {
           .from('products')
           .select('id,name,description,price,compare_at_price,image_url,stock_quantity,categories(name)')
           .eq('is_active', true)
-          .gt('stock_quantity', 0)
           .order('created_at', { ascending: false }),
         supabase
           .from('categories')
@@ -150,6 +149,7 @@ function App() {
 
   const visibleProducts = useMemo(() => {
     let list = products.filter(product => {
+      if (product.stock <= 0) return false;
       const matchesCategory =
         category === 'All' || product.category === category;
       const query = search.trim().toLowerCase();
@@ -178,11 +178,15 @@ function App() {
   const total = subtotal + delivery;
 
   const addToCart = (product: Product) => {
-    setCart(current => ({
-      ...current,
-      [product.id]: (current[product.id] || 0) + 1,
-    }));
-    setToast(product.name + ' added to cart');
+    setCart(current => {
+      const currentQuantity = current[product.id] || 0;
+      if (product.stock <= currentQuantity) {
+        setToast(product.stock <= 0 ? 'Ye product abhi out of stock hai' : 'Available stock se zyada quantity add nahi kar sakte');
+        return current;
+      }
+      setToast(product.name + ' added to cart');
+      return { ...current, [product.id]: currentQuantity + 1 };
+    });
   };
 
   const changeQuantity = (id: string, amount: number) => {
@@ -190,13 +194,30 @@ function App() {
       const next = { ...current };
       const quantity = (next[id] || 0) + amount;
       if (quantity <= 0) delete next[id];
-      else next[id] = quantity;
+      else {
+        const product = products.find(item => item.id === id);
+        if (product && quantity > product.stock) {
+          setToast('Available stock sirf ' + product.stock + ' hai');
+          return current;
+        }
+        next[id] = quantity;
+      }
       return next;
     });
   };
 
   const beginCheckout = async () => {
     setCheckoutError('');
+    if (cartItems.length === 0) {
+      setCheckoutError('Aapka cart empty hai. Pehle product add karein.');
+      setCartOpen(true);
+      return;
+    }
+    const unavailable = cartItems.find(item => (cart[item.id] || 0) > item.stock || item.stock <= 0);
+    if (unavailable) {
+      setCheckoutError(unavailable.name + ' ka available stock kam hai. Cart quantity update karein.');
+      return;
+    }
     if (cartItems.some(item => item.id.startsWith('demo-'))) {
       setCheckoutOpen(true);
       setCheckoutError('Ye abhi sample catalogue ke products hain. Real orders ke liye admin ko pehle live products aur stock add karna hoga.');
