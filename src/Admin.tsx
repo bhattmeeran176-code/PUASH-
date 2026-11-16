@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { supabase } from './supabase';
-import { ArrowLeft, BarChart3, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X, AlertTriangle, TrendingUp, Users, UserRound, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, BarChart3, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X, AlertTriangle, TrendingUp, Users, UserRound, ChevronDown, ChevronUp, Download } from 'lucide-react';
 
 type Category = { id: string; name: string };
 type OrderItem = { id: string; product_name: string; unit_price: number; quantity: number };
@@ -89,6 +89,37 @@ export default function Admin() {
       if (!categoryId && c.data?.length) setCategoryId(c.data[0].id);
     }
     setBusy(false);
+  };
+
+  const exportOrdersCsv = () => {
+    const rows = orders.filter(order => {
+      if ((order.customer_note || '').startsWith('INTERNAL TEST ORDER')) return false;
+      const address = order.shipping_address || {};
+      const haystack = [order.id, address.full_name, address.phone, address.postal_code, address.city].join(' ').toLowerCase();
+      return (orderStatusFilter === 'all' || order.status === orderStatusFilter) && haystack.includes(orderSearch.trim().toLowerCase());
+    });
+    const quote = (value: unknown) => '"' + String(value ?? '').replace(/"/g, '""') + '"';
+    const header = ['Order ID','Date','Status','Subtotal','Delivery Fee','Total','Payment Method','Items'];
+    const lines = rows.map(order => [
+      order.id,
+      new Date(order.created_at).toLocaleString('en-IN'),
+      order.status,
+      order.subtotal_amount ?? order.total_amount,
+      order.delivery_fee,
+      order.total_amount,
+      order.payment_method,
+      (order.order_items || []).map(item => item.product_name + ' x ' + item.quantity).join('; ')
+    ].map(quote).join(','));
+    const csv = '\uFEFF' + [header.map(quote).join(','), ...lines].join('\r\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'puash-orders-' + new Date().toISOString().slice(0,10) + '.csv';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setMessage(rows.length + ' orders CSV mein export hue.');
   };
 
   const loadOrders = async () => {
@@ -347,7 +378,7 @@ export default function Admin() {
             </article>;
           })}</div>}
       </section> : <section className="admin-panel">
-        <div className="admin-panel-heading"><div><span className="admin-panel-icon"><ClipboardList size={17}/></span><strong>Customer orders <small>({orders.length})</small></strong></div><button className="admin-link" onClick={loadOrders}>Refresh list</button></div>
+        <div className="admin-panel-heading"><div><span className="admin-panel-icon"><ClipboardList size={17}/></span><strong>Customer orders <small>({orders.length})</small></strong></div><div className="admin-order-tools"><button className="admin-link" onClick={exportOrdersCsv}><Download size={13}/> Export CSV</button><button className="admin-link" onClick={loadOrders}>Refresh list</button></div></div>
         <div className="admin-order-filters">
           <input value={orderSearch} onChange={e=>setOrderSearch(e.target.value)} placeholder="Search order ID, customer, phone or PIN…" aria-label="Search orders"/>
           <select value={orderStatusFilter} onChange={e=>setOrderStatusFilter(e.target.value)} aria-label="Filter by order status">
