@@ -83,6 +83,10 @@ function App() {
   const [selectedAddressId, setSelectedAddressId] = useState('');
   const [checkoutError, setCheckoutError] = useState('');
   const [placingOrder, setPlacingOrder] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{code:string;coupon_id:string;discount_amount:number}|null>(null);
+  const [couponBusy, setCouponBusy] = useState(false);
+  const [couponError, setCouponError] = useState('');
   const [toast, setToast] = useState('');
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [wishlistBusy, setWishlistBusy] = useState<string | null>(null);
@@ -230,7 +234,7 @@ function App() {
     0
   );
   const delivery = subtotal === 0 || subtotal >= 999 ? 0 : 49;
-  const total = subtotal + delivery;
+  const total = Math.max(0, subtotal + delivery - (appliedCoupon?.discount_amount || 0));
 
   const addToCart = (product: Product) => {
     const currentQuantity = cart[product.id] || 0;
@@ -298,6 +302,19 @@ function App() {
     setCheckoutOpen(true);
   };
 
+  const applyCoupon = async () => {
+    const code=couponInput.trim().toUpperCase();
+    if(!code) {setCouponError('Enter a coupon code first.');return;}
+    setCouponBusy(true);setCouponError('');
+    const {data,error}=await supabase.rpc('validate_coupon',{p_code:code,p_subtotal:subtotal});
+    setCouponBusy(false);
+    if(error) {setAppliedCoupon(null);setCouponError(error.message||'Coupon could not be applied.');return;}
+    setAppliedCoupon({code:data.code,coupon_id:data.coupon_id,discount_amount:Number(data.discount_amount)});
+    setCouponInput(data.code);
+  };
+
+  const removeCoupon = () => {setAppliedCoupon(null);setCouponInput('');setCouponError('');};
+
   const placeOrder = async () => {
     if (!selectedAddressId || placingOrder) return;
     setPlacingOrder(true);
@@ -309,14 +326,17 @@ function App() {
         quantity: cart[product.id],
       })),
       p_customer_note: null,
+      p_coupon_code: appliedCoupon?.code || null,
     });
     setPlacingOrder(false);
     if (error) {
       setCheckoutError(error.message || 'Order place nahi ho saka. Please try again.');
+      setAppliedCoupon(null);
       return;
     }
     setOrderId(String(data.order_id));
     setCart({});
+    setAppliedCoupon(null); setCouponInput(''); setCouponError('');
     setCheckoutOpen(false);
     setCartOpen(false);
   };
@@ -826,9 +846,16 @@ function App() {
                 <span><b>{address.label}{address.is_default ? ' · Default' : ''}</b><small>{address.full_name} · {address.phone}</small><small>{[address.line1,address.line2,address.city,address.state,address.postal_code,address.country].filter(Boolean).join(', ')}</small></span>
               </label>)}
             </div>}
-            <div className="checkout-total">
-              <span>Estimated order total</span>
-              <strong>{money(total)}</strong>
+            <div className="checkout-coupon">
+              <strong>Have a coupon?</strong>
+              {appliedCoupon ? <div className="checkout-coupon-applied"><span><b>{appliedCoupon.code}</b> applied · You save {money(appliedCoupon.discount_amount)}</span><button type="button" onClick={removeCoupon}>Remove</button></div> : <div className="checkout-coupon-entry"><input value={couponInput} onChange={e=>setCouponInput(e.target.value.toUpperCase())} maxLength={32} placeholder="Enter coupon code"/><button type="button" disabled={couponBusy||!couponInput.trim()} onClick={applyCoupon}>{couponBusy?'Checking…':'Apply'}</button></div>}
+              {couponError && <small className="checkout-coupon-error">{couponError}</small>}
+            </div>
+            <div className="checkout-price-breakdown">
+              <div><span>Subtotal</span><b>{money(subtotal)}</b></div>
+              <div><span>Delivery</span><b>{delivery===0?'FREE':money(delivery)}</b></div>
+              {appliedCoupon && <div className="checkout-discount"><span>Coupon ({appliedCoupon.code})</span><b>−{money(appliedCoupon.discount_amount)}</b></div>}
+              <div className="checkout-total"><span>Estimated order total</span><strong>{money(total)}</strong></div>
             </div>
             {checkoutError && <div className="account-error">{checkoutError}</div>}
             <button
