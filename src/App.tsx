@@ -35,6 +35,7 @@ type Product = {
   tone: string;
   tag?: string;
   description: string;
+  imageUrl?: string | null;
 };
 
 const sampleProducts: Product[] = [
@@ -216,6 +217,7 @@ function App() {
             emoji: emojiByCategory[productCategory] || '🛍️',
             tone: 'cream',
             description: row.description || 'Discover this product on PUASH.',
+            imageUrl: row.image_url || null,
           };
         });
         setProducts(liveProducts);
@@ -535,9 +537,7 @@ function App() {
                       {product.tag && (
                         <span className="product-tag">{product.tag}</span>
                       )}
-                      <span className={'product-emoji tone-' + product.tone}>
-                        {product.emoji}
-                      </span>
+                      {product.imageUrl ? <img className="product-photo" src={product.imageUrl} alt={product.name} /> : <span className={'product-emoji tone-' + product.tone}>{product.emoji}</span>}
                       <span className="quick-view">
                         Quick view <ArrowRight size={13} />
                       </span>
@@ -675,7 +675,7 @@ function App() {
               <X size={20} />
             </button>
             <div className={'modal-product-art tone-' + selected.tone}>
-              {selected.emoji}
+              {selected.imageUrl ? <img src={selected.imageUrl} alt={selected.name} /> : selected.emoji}
             </div>
             <div className="modal-product-copy">
               <div className="product-category">{selected.category}</div>
@@ -747,7 +747,7 @@ function App() {
                   {cartItems.map(product => (
                     <div className="cart-item" key={product.id}>
                       <div className={'cart-item-art tone-' + product.tone}>
-                        {product.emoji}
+                        {product.imageUrl ? <img src={product.imageUrl} alt={product.name} /> : product.emoji}
                       </div>
                       <div className="cart-item-details">
                         <strong>{product.name}</strong>
