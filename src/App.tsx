@@ -39,114 +39,6 @@ type Product = {
   imageUrl?: string | null;
 };
 
-const sampleProducts: Product[] = [
-  {
-    id: 'demo-1',
-    name: 'Everyday Wireless Earbuds',
-    category: 'Electronics',
-    price: 1299,
-    mrp: 1999,
-    rating: 4.6,
-    reviews: 248,
-    emoji: '🎧',
-    tone: 'lavender',
-    tag: 'Bestseller',
-    description:
-      'Comfortable wireless earbuds for music, calls and everyday listening.',
-  },
-  {
-    id: 'demo-2',
-    name: 'Classic Cotton Hoodie',
-    category: 'Fashion',
-    price: 899,
-    mrp: 1499,
-    rating: 4.5,
-    reviews: 182,
-    emoji: '🧥',
-    tone: 'peach',
-    tag: 'Popular',
-    description:
-      'A soft everyday layer with a relaxed fit and a clean, timeless look.',
-  },
-  {
-    id: 'demo-3',
-    name: 'Insulated Travel Bottle',
-    category: 'Home',
-    price: 549,
-    mrp: 899,
-    rating: 4.7,
-    reviews: 96,
-    emoji: '🥤',
-    tone: 'mint',
-    description:
-      'A reusable bottle made for your desk, commute and weekend plans.',
-  },
-  {
-    id: 'demo-4',
-    name: 'Daily Care Essentials Kit',
-    category: 'Beauty',
-    price: 699,
-    mrp: 1099,
-    rating: 4.4,
-    reviews: 134,
-    emoji: '🧴',
-    tone: 'rose',
-    tag: 'Value pick',
-    description: 'A simple everyday care set for your personal-care routine.',
-  },
-  {
-    id: 'demo-5',
-    name: 'Minimal Everyday Backpack',
-    category: 'Fashion',
-    price: 1199,
-    mrp: 1799,
-    rating: 4.6,
-    reviews: 211,
-    emoji: '🎒',
-    tone: 'sand',
-    description: 'A practical carry-all with room for daily essentials.',
-  },
-  {
-    id: 'demo-6',
-    name: 'Smart LED Desk Lamp',
-    category: 'Electronics',
-    price: 999,
-    mrp: 1599,
-    rating: 4.3,
-    reviews: 87,
-    emoji: '💡',
-    tone: 'blue',
-    description:
-      'A neat desk lamp for study sessions, reading and focused work.',
-  },
-  {
-    id: 'demo-7',
-    name: 'Ceramic Coffee Mug Set',
-    category: 'Home',
-    price: 449,
-    mrp: 749,
-    rating: 4.8,
-    reviews: 73,
-    emoji: '☕',
-    tone: 'cream',
-    tag: 'New',
-    description: 'A pair of simple ceramic mugs for your favourite hot drinks.',
-  },
-  {
-    id: 'demo-8',
-    name: 'Fresh Start Grocery Box',
-    category: 'Grocery',
-    price: 799,
-    mrp: 999,
-    rating: 4.5,
-    reviews: 65,
-    emoji: '🧺',
-    tone: 'green',
-    description:
-      'A sample essentials box to explore everyday grocery shopping.',
-  },
-];
-
 const sampleCategories = [
   { name: 'All', emoji: '✨' },
   { name: 'Electronics', emoji: '🎧' },
@@ -160,7 +52,7 @@ const money = (value: number) => '₹' + value.toLocaleString('en-IN');
 
 function App() {
   const [category, setCategory] = useState('All');
-  const [products, setProducts] = useState<Product[]>(sampleProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState(sampleCategories);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('featured');
@@ -204,8 +96,9 @@ function App() {
       if (cancelled) return;
       if (productResult.error) {
         console.warn('PUASH products could not be loaded:', productResult.error.message);
-      } else if (productResult.data?.length) {
-        const liveProducts: Product[] = productResult.data.map((row: any) => {
+        setProducts([]);
+      } else {
+        const liveProducts: Product[] = (productResult.data || []).map((row: any) => {
           const relation = Array.isArray(row.categories) ? row.categories[0] : row.categories;
           const productCategory = relation?.name || 'Other';
           const emojiByCategory: Record<string, string> = {
