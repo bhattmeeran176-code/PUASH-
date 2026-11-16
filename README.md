@@ -8,6 +8,7 @@ PUASH is a mobile-first shopping marketplace inspired by Kashmir.
 - Live product and category catalogue
 - Customer accounts and private delivery address book
 - Product search, category filters, sorting, and dedicated product detail pages
+- Customer wishlist with save/remove controls on product cards and product detail pages, shown in the customer account
 - Client-side cart with quantity controls
 - Admin product catalogue: add, edit, publish/hide, image upload, and stock adjustment
 - Secure Cash on Delivery order placement through a database function
