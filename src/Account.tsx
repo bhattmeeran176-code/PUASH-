@@ -11,6 +11,10 @@ type CustomerOrder = {
   payment_method: string;
   shipping_address: any;
   created_at: string;
+  courier_name: string | null;
+  tracking_number: string | null;
+  shipped_at: string | null;
+  delivered_at: string | null;
   order_items: { id: string; product_name: string; unit_price: number; quantity: number }[];
 };
 
@@ -72,7 +76,7 @@ export default function Account() {
       const [{ data, error: profileError }, { data: addressData, error: addressError }, { data: orderData, error: orderError }, { data: wishlistData, error: wishlistError }] = await Promise.all([
         supabase.from('profiles').select('full_name').eq('id', current.id).maybeSingle(),
         supabase.from('customer_addresses').select('*').eq('user_id', current.id).order('is_default', { ascending: false }).order('created_at', { ascending: false }),
-        supabase.from('orders').select('id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,created_at,order_items(id,product_name,unit_price,quantity)').eq('user_id', current.id).order('created_at', { ascending: false }).limit(30),
+        supabase.from('orders').select('id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,created_at,courier_name,tracking_number,shipped_at,delivered_at,order_items(id,product_name,unit_price,quantity)').eq('user_id', current.id).order('created_at', { ascending: false }).limit(30),
         supabase.from('wishlists').select('id,product_id,products(id,name,price,image_url,stock_quantity,is_active)').eq('user_id', current.id).order('created_at', { ascending: false }),
       ]);
       if (profileError) setError('Profile load nahi hua: ' + profileError.message);
@@ -116,20 +120,22 @@ export default function Account() {
         table: 'orders',
         filter: 'user_id=eq.' + user.id,
       }, (payload) => {
-        const changed = payload.new as { id: string; status: string };
+        const changed = payload.new as CustomerOrder;
         const oldOrder = ordersRef.current.find(order => order.id === changed.id);
-        if (!oldOrder || oldOrder.status === changed.status) return;
+        if (!oldOrder) return;
+        const statusChanged = oldOrder.status !== changed.status;
+        const shippingChanged = oldOrder.courier_name !== changed.courier_name || oldOrder.tracking_number !== changed.tracking_number;
+        if (!statusChanged && !shippingChanged) return;
         const labels: Record<string, string> = {
           pending: 'Order received', confirmed: 'Confirmed',
           processing: 'Preparing', shipped: 'Shipped',
           delivered: 'Delivered', cancelled: 'Cancelled',
         };
-        setStatusNotification(
-          'Your PUASH order #' + changed.id.slice(0, 8).toUpperCase() +
-          ' is now: ' + (labels[changed.status] || changed.status) + '.'
-        );
+        setStatusNotification(shippingChanged && !statusChanged
+          ? 'Shipping details updated for order #' + changed.id.slice(0, 8).toUpperCase() + '.'
+          : 'Your PUASH order #' + changed.id.slice(0, 8).toUpperCase() + ' is now: ' + (labels[changed.status] || changed.status) + '.');
         ordersRef.current = ordersRef.current.map(order => order.id === changed.id
-          ? { ...order, status: changed.status }
+          ? { ...order, status: changed.status, courier_name: changed.courier_name, tracking_number: changed.tracking_number, shipped_at: changed.shipped_at, delivered_at: changed.delivered_at }
           : order
         );
         setOrders(ordersRef.current);
@@ -319,6 +325,14 @@ export default function Account() {
                 <div className="customer-order-lines">{(order.order_items||[]).map(item=><div key={item.id}><span>{item.product_name} × {item.quantity}</span><b>₹{(Number(item.unit_price)*item.quantity).toLocaleString('en-IN')}</b></div>)}</div>
                 <div className="customer-order-total"><span>Total · {order.payment_method==='cash_on_delivery'?'Cash on Delivery':order.payment_method}</span><strong>₹{Number(order.total_amount).toLocaleString('en-IN')}</strong></div>
                 {order.status==='cancelled' ? <p className="customer-order-cancelled">This order was cancelled.</p> : <div className="customer-order-progress">{steps.map((step,index)=><div className={current>=index?'done':''} key={step}><span></span><small>{labels[step]}</small></div>)}</div>}
+                {order.courier_name || order.tracking_number ? <div className="customer-shipping-info">
+                  <strong><Package size={15}/> Shipping information</strong>
+                  {order.courier_name && <div><span>Courier</span><b>{order.courier_name}</b></div>}
+                  {order.tracking_number && <div><span>Tracking / AWB number</span><b>{order.tracking_number}</b></div>}
+                  {order.shipped_at && <div><span>Dispatched on</span><b>{new Date(order.shipped_at).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'})}</b></div>}
+                  {order.delivered_at && <div><span>Delivered on</span><b>{new Date(order.delivered_at).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'})}</b></div>}
+                  <small>Courier ki live location tracking abhi available nahi hai. Tracking number ko courier ki official website par check karein.</small>
+                </div> : null}
                 <p className="customer-order-destination">Delivering to: {[order.shipping_address?.full_name,order.shipping_address?.city,order.shipping_address?.postal_code].filter(Boolean).join(' · ')}</p>
                 <button type="button" className="customer-order-details-toggle" aria-expanded={expandedOrderId===order.id} onClick={()=>setExpandedOrderId(expandedOrderId===order.id?null:order.id)}>
                   {expandedOrderId===order.id ? 'Hide order details' : 'View order details'}
