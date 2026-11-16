@@ -19,7 +19,6 @@ import {
   SlidersHorizontal,
   Sparkles,
   Star,
-  Truck,
   UserRound,
   X,
 } from 'lucide-react';
@@ -64,7 +63,6 @@ function App() {
       return {};
     }
   });
-  const [selected, setSelected] = useState<Product | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [orderId, setOrderId] = useState('');
