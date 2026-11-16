@@ -49,6 +49,7 @@ export default function Account() {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [ordersBusy, setOrdersBusy] = useState(false);
+  const [statusNotification, setStatusNotification] = useState('');
   const [addressForm, setAddressForm] = useState(blankAddress);
   const [editingAddress, setEditingAddress] = useState<string | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
@@ -86,6 +87,39 @@ export default function Account() {
     });
     return () => { alive = false; listener.subscription.unsubscribe(); };
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel('puash-customer-orders-' + user.id)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'orders',
+        filter: 'user_id=eq.' + user.id,
+      }, (payload) => {
+        const changed = payload.new as { id: string; status: string };
+        setOrders(previous => {
+          const oldOrder = previous.find(order => order.id === changed.id);
+          if (!oldOrder || oldOrder.status === changed.status) return previous;
+          const labels: Record<string, string> = {
+            pending: 'Order received', confirmed: 'Confirmed',
+            processing: 'Preparing', shipped: 'Shipped',
+            delivered: 'Delivered', cancelled: 'Cancelled',
+          };
+          setStatusNotification(
+            'Your PUASH order #' + changed.id.slice(0, 8).toUpperCase() +
+            ' is now: ' + (labels[changed.status] || changed.status) + '.'
+          );
+          return previous.map(order => order.id === changed.id
+            ? { ...order, status: changed.status }
+            : order
+          );
+        });
+      })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [user?.id]);
 
   const authenticate = async (event: FormEvent) => {
     event.preventDefault(); setBusy(true); setError(''); setMessage('');
@@ -223,6 +257,7 @@ export default function Account() {
           </form>}
         </div>
         <section className="customer-orders">
+          {statusNotification && <div className="order-live-notice"><CheckCircle2 size={16}/><span>{statusNotification}</span><button type="button" onClick={()=>setStatusNotification('')} aria-label="Dismiss notification"><X size={15}/></button></div>}
           <div className="address-book-heading">
             <div><Package size={18}/><strong>My orders</strong><span className="customer-order-count">{orders.length}</span></div>
             <button type="button" className="address-add" disabled={ordersBusy} onClick={async()=>{
