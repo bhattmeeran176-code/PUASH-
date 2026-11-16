@@ -678,6 +678,7 @@ function App() {
                       <div className="cart-item-details">
                         <strong>{product.name}</strong>
                         <small>{money(product.price)} each</small>
+                        <small className={product.stock <= 0 ? 'cart-stock-out' : 'cart-stock-note'}>{product.stock <= 0 ? 'Out of stock' : product.stock + ' available'}</small>
                         <div className="quantity-control">
                           <button
                             onClick={() => changeQuantity(product.id, -1)}
@@ -689,6 +690,7 @@ function App() {
                           <button
                             onClick={() => changeQuantity(product.id, 1)}
                             aria-label="Increase quantity"
+                            disabled={(cart[product.id] || 0) >= product.stock}
                           >
                             <Plus size={13} />
                           </button>
