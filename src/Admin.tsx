@@ -204,6 +204,21 @@ export default function Admin() {
     return acc;
   }, {})).sort((a,b) => b.quantity - a.quantity).slice(0,5);
   const lowStockProducts = products.filter(product => product.is_active && product.stock_quantity <= 5).sort((a,b) => a.stock_quantity - b.stock_quantity);
+  const monthlySales = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date();
+    date.setDate(1);
+    date.setHours(0, 0, 0, 0);
+    date.setMonth(date.getMonth() - (5 - index));
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const amount = deliveredOrders.filter(order => {
+      const created = new Date(order.created_at);
+      return created.getFullYear() === year && created.getMonth() === month;
+    }).reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+    return { key: year + '-' + String(month + 1).padStart(2, '0'), label: date.toLocaleDateString('en-IN', { month: 'short' }), amount };
+  });
+  const maxMonthlySales = Math.max(1, ...monthlySales.map(item => item.amount));
+
 
   if (!sessionReady) return <div className="admin-screen"><div className="admin-loading">PUASH Admin load ho raha hai…</div></div>;
 
@@ -241,6 +256,17 @@ export default function Admin() {
           <article><span><Package size={17}/> Order value</span><strong>{money(orderValue)}</strong><small>All non-cancelled orders</small></article>
           <article><span><BarChart3 size={17}/> Units ordered</span><strong>{unitsSold}</strong><small>Across non-cancelled orders</small></article>
         </div>
+        <section className="admin-panel admin-monthly-panel">
+          <div className="admin-panel-heading"><div><span className="admin-panel-icon"><TrendingUp size={17}/></span><strong>Monthly sales</strong></div><small>Last 6 months · Delivered orders</small></div>
+          <div className="admin-monthly-chart" role="img" aria-label="Monthly delivered sales for the last six months">
+            {monthlySales.map(item => <div className="admin-month-column" key={item.key}>
+              <strong>{item.amount > 0 ? money(item.amount) : '₹0'}</strong>
+              <div className="admin-month-track"><div className="admin-month-bar" style={{ height: (item.amount / maxMonthlySales * 100) + '%' }} /></div>
+              <span>{item.label}</span>
+            </div>)}
+          </div>
+          <p className="admin-sales-footnote">Sales month-wise order creation date ke basis par calculate hoti hain. Sirf delivered orders count hote hain.</p>
+        </section>
         <section className="admin-panel">
           <div className="admin-panel-heading"><div><span className="admin-panel-icon"><ClipboardList size={17}/></span><strong>Order status overview</strong></div></div>
           <div className="admin-status-grid">{statusCounts.map(item=><div key={item.status}><span>{item.status.charAt(0).toUpperCase()+item.status.slice(1)}</span><strong>{item.count}</strong></div>)}</div>
