@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase';
-import { ArrowLeft, CheckCircle2, LogOut, MapPin, Plus, ShieldCheck, Trash2, UserRound, X, Package, RefreshCw } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, LogOut, MapPin, Plus, ShieldCheck, Trash2, UserRound, X, Package, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 
 type CustomerOrder = {
   id: string;
@@ -50,6 +50,7 @@ export default function Account() {
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const ordersRef = useRef<CustomerOrder[]>([]);
   const [ordersBusy, setOrdersBusy] = useState(false);
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [statusNotification, setStatusNotification] = useState('');
   const [addressForm, setAddressForm] = useState(blankAddress);
   const [editingAddress, setEditingAddress] = useState<string | null>(null);
@@ -283,6 +284,16 @@ export default function Account() {
                 <div className="customer-order-total"><span>Total · {order.payment_method==='cash_on_delivery'?'Cash on Delivery':order.payment_method}</span><strong>₹{Number(order.total_amount).toLocaleString('en-IN')}</strong></div>
                 {order.status==='cancelled' ? <p className="customer-order-cancelled">This order was cancelled.</p> : <div className="customer-order-progress">{steps.map((step,index)=><div className={current>=index?'done':''} key={step}><span></span><small>{labels[step]}</small></div>)}</div>}
                 <p className="customer-order-destination">Delivering to: {[order.shipping_address?.full_name,order.shipping_address?.city,order.shipping_address?.postal_code].filter(Boolean).join(' · ')}</p>
+                <button type="button" className="customer-order-details-toggle" aria-expanded={expandedOrderId===order.id} onClick={()=>setExpandedOrderId(expandedOrderId===order.id?null:order.id)}>
+                  {expandedOrderId===order.id ? 'Hide order details' : 'View order details'}
+                  {expandedOrderId===order.id ? <ChevronUp size={15}/> : <ChevronDown size={15}/>}
+                </button>
+                {expandedOrderId===order.id && <div className="customer-order-details">
+                  <div><span>Subtotal</span><strong>₹{Number(order.subtotal_amount ?? order.total_amount).toLocaleString('en-IN')}</strong></div>
+                  <div><span>Delivery fee</span><strong>{Number(order.delivery_fee)===0?'Free':'₹'+Number(order.delivery_fee).toLocaleString('en-IN')}</strong></div>
+                  <div><span>Payment method</span><strong>{order.payment_method==='cash_on_delivery'?'Cash on Delivery':order.payment_method}</strong></div>
+                  <div className="customer-order-full-address"><span>Delivery address</span><strong>{[order.shipping_address?.full_name,order.shipping_address?.phone,order.shipping_address?.line1,order.shipping_address?.line2,order.shipping_address?.city,order.shipping_address?.state,order.shipping_address?.postal_code,order.shipping_address?.country].filter(Boolean).join(', ') || 'Address details unavailable'}</strong></div>
+                </div>}
               </article>;
             })}
         </section>
