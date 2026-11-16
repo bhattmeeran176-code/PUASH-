@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase';
-import { ArrowLeft, CheckCircle2, LogOut, MapPin, Plus, ShieldCheck, Trash2, UserRound, X, Package, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, LogOut, MapPin, Plus, ShieldCheck, Trash2, UserRound, X, Package, RefreshCw, ChevronDown, ChevronUp, Heart } from 'lucide-react';
 
 type CustomerOrder = {
   id: string;
@@ -47,6 +47,7 @@ export default function Account() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [addresses, setAddresses] = useState<Address[]>([]);
+  const [savedProducts, setSavedProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const ordersRef = useRef<CustomerOrder[]>([]);
   const [ordersBusy, setOrdersBusy] = useState(false);
@@ -59,22 +60,26 @@ export default function Account() {
   const loadProfile = async (current: any) => {
     setUser(current);
     if (current) {
-      const [{ data, error: profileError }, { data: addressData, error: addressError }, { data: orderData, error: orderError }] = await Promise.all([
+      const [{ data, error: profileError }, { data: addressData, error: addressError }, { data: orderData, error: orderError }, { data: wishlistData, error: wishlistError }] = await Promise.all([
         supabase.from('profiles').select('full_name').eq('id', current.id).maybeSingle(),
         supabase.from('customer_addresses').select('*').eq('user_id', current.id).order('is_default', { ascending: false }).order('created_at', { ascending: false }),
         supabase.from('orders').select('id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,created_at,order_items(id,product_name,unit_price,quantity)').eq('user_id', current.id).order('created_at', { ascending: false }).limit(30),
+        supabase.from('wishlists').select('id,product_id,products(id,name,price,image_url,stock_quantity,is_active)').eq('user_id', current.id).order('created_at', { ascending: false }),
       ]);
       if (profileError) setError('Profile load nahi hua: ' + profileError.message);
       if (addressError) setError('Address book load nahi hua: ' + addressError.message);
       if (orderError) setError('Orders load nahi huye: ' + orderError.message);
+      if (wishlistError) setError('Wishlist load nahi hui: ' + wishlistError.message);
       const name = data?.full_name || current.user_metadata?.full_name || '';
       setFullName(name);
       setSavedName(name);
       setAddresses((addressData || []) as Address[]);
+      setSavedProducts((wishlistData || []).filter((row: any) => row.products?.is_active).map((row: any) => ({...row.products, wishlistId: row.id})));
       ordersRef.current = (orderData || []) as CustomerOrder[];
       setOrders(ordersRef.current);
     } else {
       setAddresses([]);
+      setSavedProducts([]);
       ordersRef.current = [];
       setOrders([]);
     }
@@ -259,6 +264,16 @@ export default function Account() {
             <button className="account-primary" disabled={addressBusy}>{addressBusy ? 'Saving address…' : editingAddress ? 'Update address' : 'Save address'}</button>
           </form>}
         </div>
+        <section className="account-wishlist">
+          <div className="address-book-heading"><div><Heart size={18}/><strong>My wishlist</strong><span className="customer-order-count">{savedProducts.length}</span></div></div>
+          <p className="address-hint">Aapke saved products yahan milenge.</p>
+          {savedProducts.length===0 ? <div className="address-empty">Wishlist abhi empty hai. Store par heart button tap karke products save karein.</div> :
+            <div className="account-wishlist-grid">{savedProducts.map(product=><article className="account-wishlist-item" key={product.id}>
+              {product.image_url ? <img src={product.image_url} alt={product.name}/> : <div className="account-wishlist-placeholder">🛍️</div>}
+              <strong>{product.name}</strong><span>₹{Number(product.price).toLocaleString('en-IN')}</span>
+              <div><a href={'/product/'+product.id}>View product</a><button type="button" onClick={async()=>{const {error:removeError}=await supabase.from('wishlists').delete().eq('product_id',product.id).eq('user_id',user.id);if(removeError)setError('Wishlist se remove nahi hua: '+removeError.message);else setSavedProducts(items=>items.filter(item=>item.id!==product.id));}}>Remove</button></div>
+            </article>)}</div>}
+        </section>
         <section className="customer-orders">
           {statusNotification && <div className="order-live-notice"><CheckCircle2 size={16}/><span>{statusNotification}</span><button type="button" onClick={()=>setStatusNotification('')} aria-label="Dismiss notification"><X size={15}/></button></div>}
           <div className="address-book-heading">
