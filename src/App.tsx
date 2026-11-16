@@ -175,6 +175,10 @@ function App() {
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [orderId, setOrderId] = useState('');
+  const [checkoutAddresses, setCheckoutAddresses] = useState<any[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState('');
+  const [checkoutError, setCheckoutError] = useState('');
+  const [placingOrder, setPlacingOrder] = useState(false);
   const [toast, setToast] = useState('');
 
   useEffect(() => {
@@ -296,9 +300,56 @@ function App() {
     });
   };
 
-  const placeDemoOrder = () => {
-    const id = 'PU' + Math.floor(100000 + Math.random() * 900000);
-    setOrderId(id);
+  const beginCheckout = async () => {
+    setCheckoutError('');
+    if (cartItems.some(item => item.id.startsWith('demo-'))) {
+      setCheckoutOpen(true);
+      setCheckoutError('Ye abhi sample catalogue ke products hain. Real orders ke liye admin ko pehle live products aur stock add karna hoga.');
+      return;
+    }
+    const { data: authData } = await supabase.auth.getUser();
+    if (!authData.user) {
+      window.location.href = '/account';
+      return;
+    }
+    const { data, error } = await supabase
+      .from('customer_addresses')
+      .select('id,label,full_name,phone,line1,line2,city,state,postal_code,country,is_default')
+      .eq('user_id', authData.user.id)
+      .order('is_default', { ascending: false })
+      .order('created_at', { ascending: false });
+    if (error) {
+      setCheckoutError('Delivery addresses load nahi huye: ' + error.message);
+      setCheckoutOpen(true);
+      return;
+    }
+    if (!data?.length) {
+      window.location.href = '/account';
+      return;
+    }
+    setCheckoutAddresses(data);
+    setSelectedAddressId(data.find((address: any) => address.is_default)?.id || data[0].id);
+    setCheckoutOpen(true);
+  };
+
+  const placeOrder = async () => {
+    if (!selectedAddressId || placingOrder) return;
+    setPlacingOrder(true);
+    setCheckoutError('');
+    const { data, error } = await supabase.rpc('place_customer_order', {
+      p_address_id: selectedAddressId,
+      p_items: cartItems.map(product => ({
+        product_id: product.id,
+        quantity: cart[product.id],
+      })),
+      p_customer_note: null,
+    });
+    setPlacingOrder(false);
+    if (error) {
+      setCheckoutError(error.message || 'Order place nahi ho saka. Please try again.');
+      return;
+    }
+    setOrderId(String(data.order_id));
     setCart({});
     setCheckoutOpen(false);
     setCartOpen(false);
@@ -626,7 +677,7 @@ function App() {
           <span>Shopping, made simple.</span>
         </div>
         <div className="footer-copy">
-          A shopping app prototype · Sample products and demo checkout
+          A Kashmir-inspired shopping store
         </div>
         <div className="footer-bottom">© 2026 PUASH · Inspired by Kashmir</div>
       </footer>
@@ -805,12 +856,12 @@ function App() {
                   </p>
                   <button
                     className="primary-button full-button"
-                    onClick={() => setCheckoutOpen(true)}
+                    onClick={beginCheckout}
                   >
                     Continue to checkout <ArrowRight size={17} />
                   </button>
                   <small className="demo-note">
-                    Demo checkout only · No payment will be collected
+                    Cash on Delivery · Final amount server par verify hoga
                   </small>
                 </div>
               </>
@@ -835,21 +886,27 @@ function App() {
             <div className="checkout-icon">
               <ShieldCheck size={28} />
             </div>
-            <div className="eyebrow">ONE LAST STEP</div>
-            <h2>Ready to place a demo order?</h2>
-            <p>
-              This is a preview of the PUASH checkout. No real payment, delivery
-              request or customer details are collected.
-            </p>
+            <div className="eyebrow">SECURE CHECKOUT</div>
+            <h2>Confirm your order.</h2>
+            <p>Choose your saved delivery address. Payment method: Cash on Delivery.</p>
+            {checkoutAddresses.length > 0 && <div className="checkout-address-list">
+              <strong>Deliver to</strong>
+              {checkoutAddresses.map((address: any) => <label className="checkout-address-option" key={address.id}>
+                <input type="radio" name="checkout-address" checked={selectedAddressId === address.id} onChange={() => setSelectedAddressId(address.id)} />
+                <span><b>{address.label}{address.is_default ? ' · Default' : ''}</b><small>{address.full_name} · {address.phone}</small><small>{[address.line1,address.line2,address.city,address.state,address.postal_code,address.country].filter(Boolean).join(', ')}</small></span>
+              </label>)}
+            </div>}
             <div className="checkout-total">
-              <span>Demo order total</span>
+              <span>Estimated order total</span>
               <strong>{money(total)}</strong>
             </div>
+            {checkoutError && <div className="account-error">{checkoutError}</div>}
             <button
               className="primary-button full-button"
-              onClick={placeDemoOrder}
+              onClick={placeOrder}
+              disabled={placingOrder || !selectedAddressId || !!checkoutError}
             >
-              Confirm demo order <Check size={17} />
+              {placingOrder ? 'Placing order…' : 'Place Cash on Delivery order'} <Check size={17} />
             </button>
             <button
               className="text-button"
@@ -878,13 +935,10 @@ function App() {
               <CheckCircle2 size={34} />
             </div>
             <div className="eyebrow">THAT'S A WRAP</div>
-            <h2>Demo order placed!</h2>
-            <p>
-              Your sample order has been created on this device. No real order
-              was sent to a seller.
-            </p>
+            <h2>Order received!</h2>
+            <p>Your Cash on Delivery order has been saved. You can track its status from your account.</p>
             <div className="order-number">
-              <span>Demo order ID</span>
+              <span>Order ID</span>
               <strong>{orderId}</strong>
             </div>
             <button
