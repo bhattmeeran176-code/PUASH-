@@ -4,7 +4,7 @@ import { ArrowLeft, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, Shiel
 
 type Category = { id: string; name: string };
 type OrderItem = { id: string; product_name: string; unit_price: number; quantity: number };
-type Order = { id: string; user_id: string; status: string; total_amount: number; shipping_address: any; customer_note: string | null; created_at: string; order_items: OrderItem[] };
+type Order = { id: string; user_id: string; status: string; total_amount: number; subtotal_amount: number | null; delivery_fee: number; payment_method: string; shipping_address: any; customer_note: string | null; created_at: string; order_items: OrderItem[] };
 type Product = {
   id: string; name: string; slug: string; description: string | null;
   price: number; compare_at_price: number | null; image_url: string | null;
@@ -31,6 +31,8 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState<'products' | 'orders'>('products');
   const [orderBusy, setOrderBusy] = useState<string | null>(null);
   const [productSearch, setProductSearch] = useState('');
+  const [orderSearch, setOrderSearch] = useState('');
+  const [orderStatusFilter, setOrderStatusFilter] = useState('all');
   const [editing, setEditing] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -78,13 +80,14 @@ export default function Admin() {
 
   const loadOrders = async () => {
     const { data, error } = await supabase.from('orders')
-      .select('id,user_id,status,total_amount,shipping_address,customer_note,created_at,order_items(id,product_name,unit_price,quantity)')
+      .select('id,user_id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,customer_note,created_at,order_items(id,product_name,unit_price,quantity)')
       .order('created_at', { ascending: false });
     if (error) setMessage('Orders load nahi hue: ' + error.message);
     else setOrders((data || []) as Order[]);
   };
 
   const updateOrderStatus = async (orderId: string, status: string) => {
+    if (!['pending','confirmed','processing','shipped','delivered','cancelled'].includes(status)) return;
     setOrderBusy(orderId); setMessage('');
     const { error } = await supabase.from('orders').update({ status, updated_at: new Date().toISOString() }).eq('id', orderId);
     setOrderBusy(null);
@@ -230,16 +233,33 @@ export default function Admin() {
     
       </> : <section className="admin-panel">
         <div className="admin-panel-heading"><div><span className="admin-panel-icon"><ClipboardList size={17}/></span><strong>Customer orders <small>({orders.length})</small></strong></div><button className="admin-link" onClick={loadOrders}>Refresh list</button></div>
-        {orders.length === 0 ? <div className="admin-empty">Abhi koi real customer order nahi hai. Jab customer checkout karega, orders yahan dikhne lagenge.</div> : <div className="admin-order-list">{orders.map(order => {
+        <div className="admin-order-filters">
+          <input value={orderSearch} onChange={e=>setOrderSearch(e.target.value)} placeholder="Search order ID, customer, phone or PIN…" aria-label="Search orders"/>
+          <select value={orderStatusFilter} onChange={e=>setOrderStatusFilter(e.target.value)} aria-label="Filter by order status">
+            <option value="all">All statuses</option>
+            {['pending','confirmed','processing','shipped','delivered','cancelled'].map(status=><option key={status} value={status}>{status.charAt(0).toUpperCase()+status.slice(1)}</option>)}
+          </select>
+        </div>
+        {orders.length === 0 ? <div className="admin-empty">Abhi koi real customer order nahi hai. Jab customer checkout karega, orders yahan dikhne lagenge.</div> : <div className="admin-order-list">{orders.filter(order => {
+          const address = order.shipping_address || {};
+          const haystack = [order.id,address.full_name,address.phone,address.postal_code,address.city].join(' ').toLowerCase();
+          return (orderStatusFilter === 'all' || order.status === orderStatusFilter) && haystack.includes(orderSearch.trim().toLowerCase());
+        }).map(order => {
           const address = order.shipping_address || {};
           return <article className="admin-order-card" key={order.id}>
             <div className="admin-order-top"><div><strong>Order #{order.id.slice(0, 8).toUpperCase()}</strong><small>{new Date(order.created_at).toLocaleString('en-IN')}</small></div><strong>{money(Number(order.total_amount))}</strong></div>
-            <div className="admin-order-address"><strong>{address.full_name || 'Customer'}</strong><span>{[address.phone,address.line1,address.line2,address.city,address.state,address.postal_code].filter(Boolean).join(', ') || 'No delivery address saved'}</span></div>
+            <div className="admin-order-address"><strong>{address.full_name || 'Customer'}</strong><span>{address.phone || 'No phone'} · {address.label || 'Address'}</span><span>{[address.line1,address.line2,address.city,address.state,address.postal_code,address.country].filter(Boolean).join(', ') || 'No delivery address saved'}</span></div>
             <div className="admin-order-items">{(order.order_items || []).map(item => <div key={item.id}><span>{item.product_name} × {item.quantity}</span><strong>{money(Number(item.unit_price) * item.quantity)}</strong></div>)}</div>
+            <div className="admin-order-summary">
+              <span>Subtotal <b>{money(Number(order.subtotal_amount ?? order.total_amount))}</b></span>
+              <span>Delivery <b>{Number(order.delivery_fee || 0) === 0 ? 'Free' : money(Number(order.delivery_fee))}</b></span>
+              <span>Payment <b>{order.payment_method === 'cash_on_delivery' ? 'Cash on Delivery' : order.payment_method}</b></span>
+            </div>
             {order.customer_note && <p className="admin-order-note">Note: {order.customer_note}</p>}
             <div className="admin-order-actions"><span className={'admin-status ' + (order.status === 'delivered' ? 'live' : '')}>{order.status}</span><select value={order.status} disabled={orderBusy === order.id} onChange={e => updateOrderStatus(order.id,e.target.value)} aria-label="Update order status">{['pending','confirmed','processing','shipped','delivered','cancelled'].map(status => <option key={status} value={status}>{status.charAt(0).toUpperCase()+status.slice(1)}</option>)}</select>{orderBusy === order.id && <small>Saving…</small>}</div>
           </article>;
         })}</div>}
+        {orders.length > 0 && orders.filter(order => { const address=order.shipping_address || {}; const haystack=[order.id,address.full_name,address.phone,address.postal_code,address.city].join(' ').toLowerCase(); return (orderStatusFilter==='all'||order.status===orderStatusFilter)&&haystack.includes(orderSearch.trim().toLowerCase()); }).length===0 && <div className="admin-empty">Is search ya status ke liye koi order nahi mila.</div>}
       </section>}</main>
   </div>;
 }
