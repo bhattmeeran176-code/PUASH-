@@ -1798,3 +1798,6 @@ main {
 .admin-test-order{display:grid;gap:5px;padding:10px 12px;border:1px solid #e6b6a8;border-radius:9px;background:#fff1ec;color:#8d3827}
 .admin-test-order strong{font-size:11px;letter-spacing:.04em}
 .admin-test-order span{font-size:12px}
+
+.admin-image-preview{display:flex;align-items:center;gap:12px;padding:10px;border:1px solid #e8e2d9;border-radius:10px;background:#faf9f6;color:#777;font-size:12px}
+.admin-image-preview img{width:76px;height:76px;object-fit:cover;border-radius:8px;background:#eee}
