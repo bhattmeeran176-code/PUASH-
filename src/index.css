@@ -1471,3 +1471,22 @@ main {
 @media(max-width:640px){.admin-header{height:60px;padding:0 16px}.admin-main{padding:28px 14px 70px}.admin-title-row{align-items:flex-start;gap:10px}.admin-title-row h1{font-size:32px}.admin-title-row p{max-width:230px;line-height:1.5}.admin-panel{padding:16px}.admin-form{grid-template-columns:1fr;gap:13px}.admin-wide{grid-column:auto}.admin-product-row{gap:9px;flex-wrap:wrap}.admin-thumb{width:46px;height:46px;flex-basis:46px}.admin-product-copy{min-width:calc(100% - 65px)}.admin-status{margin-left:55px}.admin-row-actions{margin-left:auto}.admin-auth-card{padding:24px}}
 
 .product-photo{width:100%;height:100%;position:absolute;inset:0;object-fit:cover}.product-visual{isolation:isolate}.modal-product-art img{width:100%;height:100%;max-height:310px;object-fit:cover}.cart-item-art img{width:100%;height:100%;object-fit:cover}
+
+
+/* Admin order management */
+.admin-tabs{display:flex;gap:10px;margin:0 0 20px;border-bottom:1px solid var(--line,#e7e2d8);padding-bottom:10px}
+.admin-tabs button{display:inline-flex;align-items:center;gap:8px;border:1px solid transparent;background:transparent;color:var(--muted,#777);padding:10px 14px;border-radius:10px;font:inherit;font-weight:600;cursor:pointer}
+.admin-tabs button.active{background:#eaf0e8;color:#315342;border-color:#dce7dc}
+.admin-tabs button span{font-size:12px;background:#fff;border-radius:20px;padding:2px 7px}
+.admin-order-list{display:grid;gap:14px}
+.admin-order-card{border:1px solid #e9e4da;border-radius:14px;padding:16px;background:#fff}
+.admin-order-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding-bottom:12px;border-bottom:1px solid #eee9e1}
+.admin-order-top>div{display:grid;gap:5px}
+.admin-order-top small,.admin-order-address span{color:#817e75;font-size:13px}
+.admin-order-address{display:grid;gap:5px;padding:12px 0}
+.admin-order-items{display:grid;gap:8px;padding:10px 0;border-top:1px solid #eee9e1;border-bottom:1px solid #eee9e1}
+.admin-order-items>div{display:flex;justify-content:space-between;gap:10px;font-size:13px}
+.admin-order-note{font-size:13px;color:#716c62}
+.admin-order-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:12px}
+.admin-order-actions select{border:1px solid #ded8ce;background:#fff;border-radius:9px;padding:9px 12px;color:#333;font:inherit}
+@media(max-width:600px){.admin-order-card{padding:13px}.admin-order-top{font-size:14px}.admin-order-actions select{flex:1;min-width:150px}}
