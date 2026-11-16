@@ -268,7 +268,7 @@ export default function Account() {
               const {data,error:loadError}=await supabase.from('orders').select('id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,created_at,order_items(id,product_name,unit_price,quantity)').eq('user_id',user.id).order('created_at',{ascending:false}).limit(30);
               setOrdersBusy(false);
               if(loadError) setError('Orders refresh nahi huye: '+loadError.message);
-              else setOrders((data||[]) as CustomerOrder[]);
+              else { ordersRef.current = (data||[]) as CustomerOrder[]; setOrders(ordersRef.current); }
             }}><RefreshCw size={14}/> Refresh</button>
           </div>
           <p className="address-hint">Apne recent orders aur delivery status yahan check karein.</p>
