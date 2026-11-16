@@ -85,6 +85,7 @@ function App() {
           .from('products')
           .select('id,name,description,price,compare_at_price,image_url,categories(name)')
           .eq('is_active', true)
+          .gt('stock_quantity', 0)
           .order('created_at', { ascending: false }),
         supabase
           .from('categories')
