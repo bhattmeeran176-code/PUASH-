@@ -1886,3 +1886,7 @@ main {
  .product-review-content{grid-template-columns:1fr;gap:15px}
  .product-review-total{padding:8px}
 }
+
+.product-card{position:relative}
+.wishlist-heart{position:absolute;z-index:4;right:10px;top:10px;width:34px;height:34px;border:1px solid #e8e3da;border-radius:50%;background:#fffdf7;color:#77736b;display:grid;place-items:center;cursor:pointer;box-shadow:0 2px 9px #0000000d}
+.wishlist-heart.saved{color:#bd5c4c;border-color:#e8c7c0;background:#fff7f4}
