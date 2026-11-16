@@ -1901,3 +1901,9 @@ main {
 .account-wishlist-item>div:last-child{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .account-wishlist-item a,.account-wishlist-item button{font-size:10px;color:#a85c40;font-weight:700;text-decoration:none;border:0;background:transparent;padding:4px 0}
 @media(min-width:620px){.account-wishlist-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+
+/* Save product from its detail page */
+.detail-wishlist-button{display:inline-flex;align-items:center;gap:8px;margin:3px 0 9px;padding:9px 12px;border:1px solid var(--line);border-radius:7px;background:#fffefa;color:#6f6a60;font:inherit;font-size:11px;font-weight:700;cursor:pointer}
+.detail-wishlist-button.saved{color:#bd5c4c;border-color:#e8c7c0;background:#fff7f4}
+.detail-wishlist-button:disabled{opacity:.65;cursor:wait}
