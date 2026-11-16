@@ -51,6 +51,18 @@ const sampleCategories = [
 
 const money = (value: number) => '₹' + value.toLocaleString('en-IN');
 
+const rememberViewedProduct = (product: Product) => {
+  try {
+    const current = JSON.parse(localStorage.getItem('puash-recently-viewed') || '[]');
+    const item = {
+      id: product.id, name: product.name, price: product.price,
+      image_url: product.imageUrl || null, category: product.category,
+    };
+    const next = [item, ...current.filter((entry: any) => entry?.id !== product.id)].slice(0, 8);
+    localStorage.setItem('puash-recently-viewed', JSON.stringify(next));
+  } catch { /* Ignore unavailable browser storage. */ }
+};
+
 function App() {
   const [category, setCategory] = useState('All');
   const [products, setProducts] = useState<Product[]>([]);
@@ -548,7 +560,7 @@ function App() {
                     ><Heart size={17} fill={wishlist.includes(product.id) ? 'currentColor' : 'none'}/></button>
                     <button
                       className="product-visual"
-                      onClick={() => { window.location.href = '/product/' + product.id; }}
+                      onClick={() => { rememberViewedProduct(product); window.location.href = '/product/' + product.id; }}
                       aria-label={'View ' + product.name}
                     >
                       {product.tag && (
