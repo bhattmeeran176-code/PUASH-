@@ -1,10 +1,11 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { supabase } from './supabase';
-import { ArrowLeft, BarChart3, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X, AlertTriangle, TrendingUp } from 'lucide-react';
+import { ArrowLeft, BarChart3, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X, AlertTriangle, TrendingUp, Users, UserRound, ChevronDown, ChevronUp } from 'lucide-react';
 
 type Category = { id: string; name: string };
 type OrderItem = { id: string; product_name: string; unit_price: number; quantity: number };
 type Order = { id: string; user_id: string; status: string; total_amount: number; subtotal_amount: number | null; delivery_fee: number; payment_method: string; shipping_address: any; customer_note: string | null; created_at: string; order_items: OrderItem[] };
+type Customer = { customer_id: string; email: string | null; full_name: string | null; joined_at: string; order_count: number; delivered_spend: number };
 type Product = {
   id: string; name: string; slug: string; description: string | null;
   price: number; compare_at_price: number | null; image_url: string | null;
@@ -28,7 +29,11 @@ export default function Admin() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [activeTab, setActiveTab] = useState<'sales' | 'products' | 'orders'>('sales');
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [customerLoading, setCustomerLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'sales' | 'products' | 'orders' | 'customers'>('sales');
   const [orderBusy, setOrderBusy] = useState<string | null>(null);
   const [productSearch, setProductSearch] = useState('');
   const [orderSearch, setOrderSearch] = useState('');
@@ -92,6 +97,14 @@ export default function Admin() {
       .order('created_at', { ascending: false });
     if (error) setMessage('Orders load nahi hue: ' + error.message);
     else setOrders((data || []) as Order[]);
+  };
+
+  const loadCustomers = async () => {
+    setCustomerLoading(true);
+    const { data, error } = await supabase.rpc('admin_customer_directory');
+    if (error) setMessage('Customers load nahi hue: ' + error.message);
+    else setCustomers((data || []) as Customer[]);
+    setCustomerLoading(false);
   };
 
   const updateOrderStatus = async (orderId: string, status: string) => {
@@ -246,7 +259,7 @@ export default function Admin() {
     <header className="admin-header"><a href="/" className="admin-brand"><span>PUASH.</span><small>ADMIN</small></a><button className="admin-logout" onClick={()=>supabase.auth.signOut()}><LogOut size={16}/> Sign out</button></header>
     <main className="admin-main">
       <div className="admin-title-row"><div><div className="admin-kicker">STORE CONTROL</div><h1>{activeTab === 'sales' ? 'Sales dashboard' : activeTab === 'products' ? 'Products' : 'Orders'}</h1><p>{activeTab === 'sales' ? 'Your store performance at a glance.' : activeTab === 'products' ? 'Add, edit and publish products on your PUASH store.' : 'Review customer orders and update their fulfilment status.'}</p></div><button className="admin-refresh" onClick={() => { loadData(); loadOrders(); }}><RefreshCw size={16}/> Refresh</button></div>
-      <nav className="admin-tabs"><button className={activeTab === 'sales' ? 'active' : ''} onClick={() => setActiveTab('sales')}><BarChart3 size={16}/> Dashboard</button><button className={activeTab === 'products' ? 'active' : ''} onClick={() => setActiveTab('products')}><Package size={16}/> Products <span>{products.length}</span></button><button className={activeTab === 'orders' ? 'active' : ''} onClick={() => setActiveTab('orders')}><ClipboardList size={16}/> Orders <span>{genuineOrders.length}</span></button></nav>
+      <nav className="admin-tabs"><button className={activeTab === 'sales' ? 'active' : ''} onClick={() => setActiveTab('sales')}><BarChart3 size={16}/> Dashboard</button><button className={activeTab === 'products' ? 'active' : ''} onClick={() => setActiveTab('products')}><Package size={16}/> Products <span>{products.length}</span></button><button className={activeTab === 'orders' ? 'active' : ''} onClick={() => setActiveTab('orders')}><ClipboardList size={16}/> Orders <span>{genuineOrders.length}</span></button><button className={activeTab === 'customers' ? 'active' : ''} onClick={() => { setActiveTab('customers'); loadCustomers(); }}><Users size={16}/> Customers <span>{customers.length}</span></button></nav>
       {message && <div className="admin-message">{message}<button onClick={()=>setMessage('')}><X size={14}/></button></div>}
       {activeTab === 'sales' ? <section className="admin-sales-dashboard">
         <div className="admin-sales-note">Figures exclude internal test orders. Sales total below counts delivered orders only.</div>
@@ -313,7 +326,27 @@ export default function Admin() {
           </article>)}</div>}
       </section>
     
-      </> : <section className="admin-panel">
+      </> : activeTab === 'customers' ? <section className="admin-panel">
+        <div className="admin-panel-heading"><div><span className="admin-panel-icon"><Users size={17}/></span><strong>Customer directory <small>({customers.length})</small></strong></div><button className="admin-link" onClick={loadCustomers}><RefreshCw size={13}/> Refresh list</button></div>
+        <input className="admin-product-search" value={customerSearch} onChange={e=>setCustomerSearch(e.target.value)} placeholder="Search customer name or email…" aria-label="Search customers"/>
+        {customerLoading ? <div className="admin-empty">Customers load ho rahe hain…</div> : customers.filter(customer => (customer.full_name || '').toLowerCase().includes(customerSearch.toLowerCase()) || (customer.email || '').toLowerCase().includes(customerSearch.toLowerCase())).length === 0 ? <div className="admin-empty">Koi customer nahi mila.</div> :
+          <div className="admin-customer-list">{customers.filter(customer => (customer.full_name || '').toLowerCase().includes(customerSearch.toLowerCase()) || (customer.email || '').toLowerCase().includes(customerSearch.toLowerCase())).map(customer => {
+            const customerOrders = genuineOrders.filter(order => order.user_id === customer.customer_id).sort((x,y)=>new Date(y.created_at).getTime()-new Date(x.created_at).getTime());
+            const expanded = selectedCustomerId === customer.customer_id;
+            return <article className="admin-customer-card" key={customer.customer_id}>
+              <button className="admin-customer-summary" onClick={()=>setSelectedCustomerId(expanded ? null : customer.customer_id)} aria-expanded={expanded}>
+                <span className="admin-customer-avatar"><UserRound size={18}/></span>
+                <span className="admin-customer-identity"><strong>{customer.full_name || 'Customer'}</strong><small>{customer.email || 'Email not available'}</small><small>Joined {new Date(customer.joined_at).toLocaleDateString('en-IN')}</small></span>
+                <span className="admin-customer-stats"><strong>{customer.order_count} orders</strong><small>{money(Number(customer.delivered_spend || 0))} delivered</small></span>
+                {expanded ? <ChevronUp size={17}/> : <ChevronDown size={17}/>}
+              </button>
+              {expanded && <div className="admin-customer-history">
+                <strong>Order history</strong>
+                {customerOrders.length === 0 ? <p>Is customer ka abhi koi order nahi hai.</p> : customerOrders.map(order=><div className="admin-customer-order" key={order.id}><span><b>#{order.id.slice(0,8).toUpperCase()}</b><small>{new Date(order.created_at).toLocaleDateString('en-IN')}</small></span><span><b>{money(Number(order.total_amount))}</b><small className={'admin-customer-order-status status-'+order.status}>{order.status}</small></span></div>)}
+              </div>}
+            </article>;
+          })}</div>}
+      </section> : <section className="admin-panel">
         <div className="admin-panel-heading"><div><span className="admin-panel-icon"><ClipboardList size={17}/></span><strong>Customer orders <small>({orders.length})</small></strong></div><button className="admin-link" onClick={loadOrders}>Refresh list</button></div>
         <div className="admin-order-filters">
           <input value={orderSearch} onChange={e=>setOrderSearch(e.target.value)} placeholder="Search order ID, customer, phone or PIN…" aria-label="Search orders"/>
