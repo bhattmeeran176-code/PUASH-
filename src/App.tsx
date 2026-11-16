@@ -39,7 +39,7 @@ type Product = {
 
 const sampleProducts: Product[] = [
   {
-    id: 1,
+    id: 'demo-1',
     name: 'Everyday Wireless Earbuds',
     category: 'Electronics',
     price: 1299,
@@ -53,7 +53,7 @@ const sampleProducts: Product[] = [
       'Comfortable wireless earbuds for music, calls and everyday listening.',
   },
   {
-    id: 2,
+    id: 'demo-2',
     name: 'Classic Cotton Hoodie',
     category: 'Fashion',
     price: 899,
@@ -67,7 +67,7 @@ const sampleProducts: Product[] = [
       'A soft everyday layer with a relaxed fit and a clean, timeless look.',
   },
   {
-    id: 3,
+    id: 'demo-3',
     name: 'Insulated Travel Bottle',
     category: 'Home',
     price: 549,
@@ -80,7 +80,7 @@ const sampleProducts: Product[] = [
       'A reusable bottle made for your desk, commute and weekend plans.',
   },
   {
-    id: 4,
+    id: 'demo-4',
     name: 'Daily Care Essentials Kit',
     category: 'Beauty',
     price: 699,
@@ -93,7 +93,7 @@ const sampleProducts: Product[] = [
     description: 'A simple everyday care set for your personal-care routine.',
   },
   {
-    id: 5,
+    id: 'demo-5',
     name: 'Minimal Everyday Backpack',
     category: 'Fashion',
     price: 1199,
@@ -105,7 +105,7 @@ const sampleProducts: Product[] = [
     description: 'A practical carry-all with room for daily essentials.',
   },
   {
-    id: 6,
+    id: 'demo-6',
     name: 'Smart LED Desk Lamp',
     category: 'Electronics',
     price: 999,
@@ -118,7 +118,7 @@ const sampleProducts: Product[] = [
       'A neat desk lamp for study sessions, reading and focused work.',
   },
   {
-    id: 7,
+    id: 'demo-7',
     name: 'Ceramic Coffee Mug Set',
     category: 'Home',
     price: 449,
@@ -131,7 +131,7 @@ const sampleProducts: Product[] = [
     description: 'A pair of simple ceramic mugs for your favourite hot drinks.',
   },
   {
-    id: 8,
+    id: 'demo-8',
     name: 'Fresh Start Grocery Box',
     category: 'Grocery',
     price: 799,
@@ -283,7 +283,7 @@ function App() {
     setToast(product.name + ' added to cart');
   };
 
-  const changeQuantity = (id: number, amount: number) => {
+  const changeQuantity = (id: string, amount: number) => {
     setCart(current => {
       const next = { ...current };
       const quantity = (next[id] || 0) + amount;
