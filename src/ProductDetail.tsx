@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { ArrowLeft, CheckCircle2, Minus, Plus, ShoppingBag, Truck, Star, MessageSquare, UserRound } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Minus, Plus, ShoppingBag, Truck, Star, MessageSquare, UserRound, Heart } from 'lucide-react';
 import { supabase } from './supabase';
 
 type ProductInfo = {
@@ -31,6 +31,8 @@ export default function ProductDetail() {
   const [reviewBusy, setReviewBusy] = useState(false);
   const [reviewMessage, setReviewMessage] = useState('');
   const [reviewError, setReviewError] = useState('');
+  const [wishlistSaved, setWishlistSaved] = useState(false);
+  const [wishlistBusy, setWishlistBusy] = useState(false);
 
   const loadReviews = async () => {
     setReviewsLoading(true);
@@ -42,10 +44,12 @@ export default function ProductDetail() {
     const currentUserId = authData.user?.id || null;
     setUserId(currentUserId);
     if (currentUserId) {
-      const [{ data: purchaseData }, { data: ownData }] = await Promise.all([
+      const [{ data: purchaseData }, { data: ownData }, { data: savedData }] = await Promise.all([
         supabase.from('order_items').select('id,orders!inner(user_id,status)').eq('product_id', productId).eq('orders.user_id', currentUserId).eq('orders.status', 'delivered').limit(1),
         supabase.from('product_reviews').select('id,user_id,rating,title,body,created_at').eq('product_id', productId).eq('user_id', currentUserId).maybeSingle(),
+        supabase.from('wishlists').select('id').eq('product_id', productId).eq('user_id', currentUserId).maybeSingle(),
       ]);
+      setWishlistSaved(Boolean(savedData));
       setCanReview(Boolean(purchaseData?.length));
       const existing = (ownData || null) as Review | null;
       setOwnReview(existing);
@@ -57,6 +61,7 @@ export default function ProductDetail() {
     } else {
       setCanReview(false);
       setOwnReview(null);
+      setWishlistSaved(false);
     }
     setReviewsLoading(false);
   };
@@ -101,6 +106,26 @@ export default function ProductDetail() {
     }
   };
 
+  const toggleWishlist = async () => {
+    if (!product || wishlistBusy) return;
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) {
+      window.location.href = '/account';
+      return;
+    }
+    setWishlistBusy(true);
+    const result = wishlistSaved
+      ? await supabase.from('wishlists').delete().eq('user_id', auth.user.id).eq('product_id', product.id)
+      : await supabase.from('wishlists').insert({ user_id: auth.user.id, product_id: product.id });
+    setWishlistBusy(false);
+    if (result.error) {
+      setMessage('Wishlist update nahi hui. Dobara try karein.');
+      return;
+    }
+    setWishlistSaved(!wishlistSaved);
+    setMessage(wishlistSaved ? 'Wishlist se remove ho gaya.' : 'Wishlist mein save ho gaya.');
+  };
+
   const submitReview = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!userId || !canReview || reviewBusy) return;
@@ -138,6 +163,9 @@ export default function ProductDetail() {
             <section className="detail-information">
               <div className="eyebrow">PUASH COLLECTION · {product.category.toUpperCase()}</div>
               <h1>{product.name}</h1>
+              <button type="button" className={'detail-wishlist-button ' + (wishlistSaved ? 'saved' : '')} onClick={() => void toggleWishlist()} disabled={wishlistBusy}>
+                <Heart size={16} fill={wishlistSaved ? 'currentColor' : 'none'}/> {wishlistBusy ? 'Saving…' : wishlistSaved ? 'Saved to wishlist' : 'Save to wishlist'}
+              </button>
               <div className="detail-review-summary"><span className="detail-review-stars"><Star size={15} fill="currentColor"/> {averageRating ? averageRating.toFixed(1) : 'New'}</span><span>{reviews.length} {reviews.length===1?'review':'reviews'}</span></div>
               <div className="detail-prices"><strong>{money(product.price)}</strong>{product.mrp > product.price && <><del>{money(product.mrp)}</del><span>{Math.round((1-product.price/product.mrp)*100)}% off</span></>}</div>
               <div className={product.stock > 0 ? 'detail-availability' : 'detail-availability out'}><span />{product.stock > 0 ? product.stock + ' pieces available' : 'Currently out of stock'}</div>
