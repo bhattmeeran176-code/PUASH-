@@ -1977,3 +1977,6 @@ main {
 .admin-customer-order-status.status-delivered{color:#3c795a}
 .admin-customer-order-status.status-cancelled{color:#a9482d}
 @media(max-width:420px){.admin-customer-summary{gap:8px;padding:10px}.admin-customer-history{padding-left:14px}.admin-customer-stats strong{font-size:9px}}
+
+.admin-order-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+@media(max-width:420px){.admin-order-tools{gap:8px}.admin-order-tools .admin-link{font-size:9px}}
