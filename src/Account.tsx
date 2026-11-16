@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase';
 import { ArrowLeft, CheckCircle2, LogOut, MapPin, Plus, ShieldCheck, Trash2, UserRound, X, Package, RefreshCw } from 'lucide-react';
 
@@ -48,6 +48,7 @@ export default function Account() {
   const [error, setError] = useState('');
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
+  const ordersRef = useRef<CustomerOrder[]>([]);
   const [ordersBusy, setOrdersBusy] = useState(false);
   const [statusNotification, setStatusNotification] = useState('');
   const [addressForm, setAddressForm] = useState(blankAddress);
@@ -69,9 +70,11 @@ export default function Account() {
       setFullName(name);
       setSavedName(name);
       setAddresses((addressData || []) as Address[]);
-      setOrders((orderData || []) as CustomerOrder[]);
+      ordersRef.current = (orderData || []) as CustomerOrder[];
+      setOrders(ordersRef.current);
     } else {
       setAddresses([]);
+      ordersRef.current = [];
       setOrders([]);
     }
     setReady(true);
@@ -99,23 +102,22 @@ export default function Account() {
         filter: 'user_id=eq.' + user.id,
       }, (payload) => {
         const changed = payload.new as { id: string; status: string };
-        setOrders(previous => {
-          const oldOrder = previous.find(order => order.id === changed.id);
-          if (!oldOrder || oldOrder.status === changed.status) return previous;
-          const labels: Record<string, string> = {
-            pending: 'Order received', confirmed: 'Confirmed',
-            processing: 'Preparing', shipped: 'Shipped',
-            delivered: 'Delivered', cancelled: 'Cancelled',
-          };
-          setStatusNotification(
-            'Your PUASH order #' + changed.id.slice(0, 8).toUpperCase() +
-            ' is now: ' + (labels[changed.status] || changed.status) + '.'
-          );
-          return previous.map(order => order.id === changed.id
-            ? { ...order, status: changed.status }
-            : order
-          );
-        });
+        const oldOrder = ordersRef.current.find(order => order.id === changed.id);
+        if (!oldOrder || oldOrder.status === changed.status) return;
+        const labels: Record<string, string> = {
+          pending: 'Order received', confirmed: 'Confirmed',
+          processing: 'Preparing', shipped: 'Shipped',
+          delivered: 'Delivered', cancelled: 'Cancelled',
+        };
+        setStatusNotification(
+          'Your PUASH order #' + changed.id.slice(0, 8).toUpperCase() +
+          ' is now: ' + (labels[changed.status] || changed.status) + '.'
+        );
+        ordersRef.current = ordersRef.current.map(order => order.id === changed.id
+          ? { ...order, status: changed.status }
+          : order
+        );
+        setOrders(ordersRef.current);
       })
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
