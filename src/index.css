@@ -1671,3 +1671,126 @@ main {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Customer order history and delivery tracking */
+.customer-orders {
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid #eee9e1;
+}
+.customer-order-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 20px;
+  background: #edf2eb;
+  color: #496453;
+  font-size: 11px;
+  font-weight: 700;
+}
+.customer-order-card {
+  border: 1px solid #e8e2d8;
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 12px;
+  background: #fff;
+}
+.customer-order-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+.customer-order-top > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.customer-order-top strong {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.customer-order-top small,
+.customer-order-destination {
+  color: #888176;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.customer-order-status {
+  flex: 0 0 auto;
+  border-radius: 20px;
+  padding: 5px 8px;
+  background: #f5efe5;
+  color: #7b6240;
+  font-size: 10px;
+  font-weight: 700;
+}
+.customer-order-status.status-delivered { background: #eaf2e9; color: #496453; }
+.customer-order-status.status-cancelled { background: #fbece9; color: #a74d3a; }
+.customer-order-lines {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+.customer-order-lines > div,
+.customer-order-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+}
+.customer-order-lines > div span { color: #777166; }
+.customer-order-lines b,
+.customer-order-total strong { color: #302f2a; }
+.customer-order-total {
+  padding-top: 11px;
+  margin-top: 11px;
+  border-top: 1px solid #eee9e1;
+}
+.customer-order-progress {
+  display: flex;
+  justify-content: space-between;
+  gap: 3px;
+  margin: 18px 0 12px;
+}
+.customer-order-progress > div {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  flex: 1;
+  position: relative;
+  text-align: center;
+}
+.customer-order-progress > div:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 55%;
+  width: 90%;
+  height: 2px;
+  background: #e8e2d8;
+}
+.customer-order-progress > div.done:not(:last-child)::after { background: #78917d; }
+.customer-order-progress span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #e1ddd5;
+  z-index: 1;
+}
+.customer-order-progress .done span { background: #496453; }
+.customer-order-progress small {
+  font-size: 8px;
+  color: #898276;
+  line-height: 1.3;
+}
+.customer-order-progress .done small { color: #496453; font-weight: 700; }
+.customer-order-cancelled {
+  color: #a74d3a;
+  font-size: 11px;
+  margin: 12px 0;
+}
+.customer-order-destination { margin: 10px 0 0; }
