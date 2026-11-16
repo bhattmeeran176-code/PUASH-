@@ -1618,3 +1618,56 @@ main {
 .admin-stock-control button:disabled {
   opacity: .4;
 }
+
+
+/* Admin order search, filters and payment breakdown */
+.admin-order-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(145px, 190px);
+  gap: 10px;
+  margin: 14px 0 16px;
+}
+.admin-order-filters input,
+.admin-order-filters select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid #e3ded4;
+  border-radius: 9px;
+  padding: 11px 12px;
+  background: #fff;
+  color: #302f2a;
+  font: inherit;
+  font-size: 12px;
+}
+.admin-order-address {
+  display: grid;
+  gap: 5px;
+}
+.admin-order-address span {
+  overflow-wrap: anywhere;
+}
+.admin-order-summary {
+  display: grid;
+  gap: 7px;
+  padding: 12px 0;
+  margin-top: 8px;
+  border-top: 1px solid #eee9e1;
+  border-bottom: 1px solid #eee9e1;
+}
+.admin-order-summary span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #777166;
+  font-size: 12px;
+}
+.admin-order-summary b {
+  color: #302f2a;
+  text-align: right;
+}
+@media (max-width: 560px) {
+  .admin-order-filters {
+    grid-template-columns: 1fr;
+  }
+}
