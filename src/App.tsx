@@ -80,7 +80,7 @@ function App() {
   useEffect(() => {
     let cancelled = false;
     async function loadStoreData() {
-      const [productResult, categoryResult] = await Promise.all([
+      const [productResult, categoryResult, reviewResult] = await Promise.all([
         supabase
           .from('products')
           .select('id,name,description,price,compare_at_price,image_url,stock_quantity,categories(name)')
@@ -91,6 +91,7 @@ function App() {
           .select('id,name,slug')
           .eq('is_active', true)
           .order('name'),
+        supabase.from('product_reviews').select('product_id,rating'),
       ]);
 
       if (cancelled) return;
@@ -98,8 +99,16 @@ function App() {
         console.warn('PUASH products could not be loaded:', productResult.error.message);
         setProducts([]);
       } else {
+        const reviewStats = new Map<string, { total: number; count: number }>();
+        (reviewResult.data || []).forEach((review: any) => {
+          const current = reviewStats.get(review.product_id) || { total: 0, count: 0 };
+          current.total += Number(review.rating);
+          current.count += 1;
+          reviewStats.set(review.product_id, current);
+        });
         const liveProducts: Product[] = (productResult.data || []).map((row: any) => {
           const relation = Array.isArray(row.categories) ? row.categories[0] : row.categories;
+          const stats = reviewStats.get(row.id);
           const productCategory = relation?.name || 'Other';
           const emojiByCategory: Record<string, string> = {
             Electronics: '🎧', Fashion: '🧥', Home: '🏡', Beauty: '🌸', Grocery: '🥬',
@@ -110,8 +119,8 @@ function App() {
             category: productCategory,
             price: Number(row.price),
             mrp: Number(row.compare_at_price ?? row.price),
-            rating: 0,
-            reviews: 0,
+            rating: stats?.count ? Number((stats.total / stats.count).toFixed(1)) : 0,
+            reviews: stats?.count || 0,
             emoji: emojiByCategory[productCategory] || '🛍️',
             tone: 'cream',
             description: row.description || 'Discover this product on PUASH.',
