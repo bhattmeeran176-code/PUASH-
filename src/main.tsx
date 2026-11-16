@@ -3,10 +3,11 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import Admin from './Admin';
 import Account from './Account';
+import ProductDetail from './ProductDetail';
 import './index.css';
 
 const currentPath = window.location.pathname;
-const Page = currentPath.startsWith('/admin') ? Admin : currentPath.startsWith('/account') ? Account : App;
+const Page = currentPath.startsWith('/admin') ? Admin : currentPath.startsWith('/account') ? Account : currentPath.startsWith('/product/') ? ProductDetail : App;
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
