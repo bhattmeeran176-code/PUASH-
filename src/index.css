@@ -1574,3 +1574,47 @@ main {
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
+
+
+/* Admin catalogue search and quick inventory controls */
+.admin-product-search {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 12px 0 16px;
+  border: 1px solid #e3ded4;
+  border-radius: 9px;
+  padding: 12px 14px;
+  background: #fff;
+  color: #302f2a;
+  font: inherit;
+  font-size: 13px;
+}
+.admin-stock-control {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 8px;
+}
+.admin-stock-control span {
+  font-size: 11px;
+  color: #777166;
+  margin-right: 4px;
+}
+.admin-stock-control .admin-stock-low {
+  color: #b24d35;
+  font-weight: 700;
+}
+.admin-stock-control button {
+  width: 25px;
+  height: 25px;
+  border: 1px solid #e5dfd4;
+  border-radius: 6px;
+  background: #fff;
+  color: #496453;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+}
+.admin-stock-control button:disabled {
+  opacity: .4;
+}
