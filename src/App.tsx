@@ -483,7 +483,7 @@ function App() {
                   <article className="product-card" key={product.id}>
                     <button
                       className="product-visual"
-                      onClick={() => setSelected(product)}
+                      onClick={() => { window.location.href = '/product/' + product.id; }}
                       aria-label={'View ' + product.name}
                     >
                       {product.tag && (
@@ -614,53 +614,6 @@ function App() {
         <div className="toast">
           <CheckCircle2 size={17} />
           {toast}
-        </div>
-      )}
-
-      {selected && (
-        <div className="modal-backdrop" onClick={() => setSelected(null)}>
-          <section
-            className="product-modal"
-            onClick={event => event.stopPropagation()}
-          >
-            <button
-              className="close-button"
-              onClick={() => setSelected(null)}
-              aria-label="Close"
-            >
-              <X size={20} />
-            </button>
-            <div className={'modal-product-art tone-' + selected.tone}>
-              {selected.imageUrl ? <img src={selected.imageUrl} alt={selected.name} /> : selected.emoji}
-            </div>
-            <div className="modal-product-copy">
-              <div className="product-category">{selected.category}</div>
-              <h2>{selected.name}</h2>
-              <div className="rating-line">
-                <span className="rating">
-                  <Star size={12} fill="currentColor" /> {selected.rating}
-                </span>
-                <span className="review-count">
-                  ({selected.reviews} reviews)
-                </span>
-              </div>
-              <p>{selected.description}</p>
-              <div className="detail-stock"><span className="detail-stock-dot" /> In stock · {selected.stock} available</div>
-              <div className="detail-delivery"><Truck size={16} /> Delivery options shown at checkout</div>
-              <div className="modal-price">
-                {money(selected.price)} <del>{money(selected.mrp)}</del>
-              </div>
-              <button
-                className="primary-button full-button"
-                onClick={() => {
-                  addToCart(selected);
-                  setSelected(null);
-                }}
-              >
-                Add to cart <ShoppingBag size={17} />
-              </button>
-            </div>
-          </section>
         </div>
       )}
 
