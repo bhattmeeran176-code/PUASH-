@@ -1907,3 +1907,9 @@ main {
 .detail-wishlist-button{display:inline-flex;align-items:center;gap:8px;margin:3px 0 9px;padding:9px 12px;border:1px solid var(--line);border-radius:7px;background:#fffefa;color:#6f6a60;font:inherit;font-size:11px;font-weight:700;cursor:pointer}
 .detail-wishlist-button.saved{color:#bd5c4c;border-color:#e8c7c0;background:#fff7f4}
 .detail-wishlist-button:disabled{opacity:.65;cursor:wait}
+
+
+/* Recently viewed products in customer account */
+.recent-viewed-section{margin-top:24px}
+.recent-viewed-section .address-book-heading{display:flex;justify-content:space-between;align-items:center}
+.recent-viewed-section .account-wishlist-item a{display:inline-block}
