@@ -2,28 +2,29 @@
 
 PUASH is a mobile-first shopping marketplace prototype inspired by Kashmir.
 
-## Included in this repository
-
+## Included
 - React + Vite + TypeScript frontend
-- Sample product catalogue and category browsing
+- Supabase client connection
+- Live product and category reads from Supabase
+- Sample catalogue fallback while the live product catalogue is empty
 - Product search, sorting, and detail view
 - Client-side cart with quantity controls
 - Demo checkout and order confirmation
 - Responsive mobile-first layout and web app manifest
 
-## Important project status
+## Backend status
+The PUASH Supabase project is connected for public catalogue reads. Database tables have Row Level Security enabled. Product and category management, customer authentication, secure order placement, payment processing, and fulfilment still need to be implemented. Checkout remains a demo and does not collect payment or create a real order.
 
-This is currently a frontend prototype. The checkout is a demo only. It does not yet include a production backend, real inventory, seller accounts, customer authentication, payment processing, or order fulfilment.
+## Environment variables
+The app has safe public-project defaults in `src/supabase.ts`. For another environment, copy `.env.example` to `.env.local` and add the Supabase project URL and **publishable** key. Never put a Supabase secret or service-role key in frontend code.
 
 ## Run locally
-
 ```bash
 npm install
 npm run dev
 ```
 
 ## Production build
-
 ```bash
 npm run build
 ```
