@@ -1913,3 +1913,31 @@ main {
 .recent-viewed-section{margin-top:24px}
 .recent-viewed-section .address-book-heading{display:flex;justify-content:space-between;align-items:center}
 .recent-viewed-section .account-wishlist-item a{display:inline-block}
+
+
+/* PUASH admin sales dashboard */
+.admin-sales-dashboard{display:flex;flex-direction:column;gap:16px}
+.admin-sales-note{padding:11px 13px;border:1px solid #e8e3da;border-radius:6px;background:#fffefa;color:#77736b;font-size:11px;line-height:1.5}
+.admin-sales-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.admin-sales-metrics article{padding:16px;border:1px solid var(--line);border-radius:8px;background:var(--paper);display:flex;flex-direction:column;gap:8px;min-width:0}
+.admin-sales-metrics article>span{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:10px;font-weight:600}
+.admin-sales-metrics article>strong{font-size:clamp(18px,3vw,25px);overflow-wrap:anywhere}
+.admin-sales-metrics article>small{font-size:9px;color:var(--muted)}
+.admin-status-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.admin-status-grid>div{padding:12px;border-radius:6px;background:#f7f5f0;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.admin-status-grid span{font-size:10px;color:var(--muted);text-transform:capitalize}
+.admin-status-grid strong{font-size:16px}
+.admin-sales-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.admin-sales-list{display:flex;flex-direction:column}
+.admin-sales-list>div{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);min-width:0}
+.admin-sales-list>div:last-child{border-bottom:0}
+.admin-sales-list>div>div{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.admin-sales-list>div>div strong{font-size:11px;overflow-wrap:anywhere}
+.admin-sales-list small{font-size:9px;color:var(--muted)}
+.admin-sales-list b{font-size:10px;white-space:nowrap}
+.admin-sales-rank{width:24px;height:24px;flex:0 0 24px;display:grid;place-items:center;border-radius:50%;background:#f0e9dc;color:#8a513b;font-size:10px;font-weight:700}
+.admin-low-count{font-size:10px;color:#a9482d;font-weight:700}
+.admin-low-dot{width:24px;height:24px;flex:0 0 24px;display:grid;place-items:center;color:#a9482d}
+.admin-sales-footnote{font-size:10px;color:var(--muted);margin:10px 0 0}
+@media(max-width:720px){.admin-sales-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-sales-columns{grid-template-columns:1fr}}
+@media(max-width:380px){.admin-status-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
