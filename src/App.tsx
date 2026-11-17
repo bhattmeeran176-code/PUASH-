@@ -947,19 +947,13 @@ function App() {
                   </div>
                   <div>
                     <span>Delivery</span>
-                    <strong>{delivery === 0 ? 'Free' : money(delivery)}</strong>
+                    <strong>Calculated at checkout</strong>
                   </div>
                   <div className="summary-total">
-                    <span>Total</span>
-                    <strong>{money(total)}</strong>
+                    <span>Items subtotal</span>
+                    <strong>{money(subtotal)}</strong>
                   </div>
-                  <p>
-                    {subtotal >= 999
-                      ? 'You unlocked free delivery.'
-                      : 'Add ' +
-                        money(999 - subtotal) +
-                        ' more for free delivery.'}
-                  </p>
+                  <p>Final delivery fee and any free-delivery offer are confirmed after you select your delivery address.</p>
                   <button
                     className="primary-button full-button"
                     onClick={beginCheckout}
