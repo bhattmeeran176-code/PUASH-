@@ -158,6 +158,7 @@ function App() {
   };
 
   useEffect(() => {
+    let cancelled = false;
     async function loadStoreData() {
       const [productResult, categoryResult, reviewResult, variantResult] = await Promise.all([
         supabase
