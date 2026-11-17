@@ -182,6 +182,9 @@ export default function ProductDetail() {
     const previousTitle = document.title;
     const descriptionTag = document.querySelector('meta[name="description"]');
     const previousDescription = descriptionTag?.getAttribute('content') || '';
+    const previousOgTitle = document.querySelector('meta[property="og:title"]')?.getAttribute('content') || '';
+    const previousOgDescription = document.querySelector('meta[property="og:description"]')?.getAttribute('content') || '';
+    const previousOgImage = document.querySelector('meta[property="og:image"]')?.getAttribute('content') || '';
     const pageTitle = product.name + ' | PUASH';
     const pageDescription = (product.description || 'Discover ' + product.name + ' at PUASH.').replace(/\\s+/g, ' ').slice(0, 155);
     document.title = pageTitle;
@@ -190,8 +193,8 @@ export default function ProductDetail() {
       let tag = document.querySelector(selector) as HTMLMetaElement | null;
       if (!tag) {
         tag = document.createElement('meta');
-        if (selector.includes('og:')) tag.setAttribute('property', selector.match(/content="([^"]+)"/)?.[1] || '');
-        else tag.setAttribute('name', selector.match(/name="([^"]+)"/)?.[1] || '');
+        if (selector.includes('og:')) tag.setAttribute('property', selector.match(/\\[property="([^"]+)"\\]/)?.[1] || '');
+        else tag.setAttribute('name', selector.match(/\\[name="([^"]+)"\\]/)?.[1] || '');
         document.head.appendChild(tag);
       }
       tag.setAttribute(attribute, value);
@@ -228,6 +231,9 @@ export default function ProductDetail() {
     return () => {
       document.title = previousTitle;
       if (descriptionTag) descriptionTag.setAttribute('content', previousDescription);
+      document.querySelector('meta[property="og:title"]')?.setAttribute('content', previousOgTitle);
+      document.querySelector('meta[property="og:description"]')?.setAttribute('content', previousOgDescription);
+      document.querySelector('meta[property="og:image"]')?.setAttribute('content', previousOgImage);
       document.getElementById('puash-product-schema')?.remove();
     };
   }, [product, variants, selectedVariantId, reviews, averageRating, galleryImages]);
