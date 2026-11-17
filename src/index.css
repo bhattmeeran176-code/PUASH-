@@ -2251,3 +2251,8 @@ main {
  .filter-field{min-width:0}
  .clear-filter-button{grid-column:1/-1}
 }
+
+
+.saved-only-filter{display:flex;align-items:center;gap:7px;min-height:36px;color:#536b50;font-size:10px;font-weight:700;white-space:nowrap}
+.saved-only-filter input{accent-color:#516b55;width:15px;height:15px}
+@media(max-width:600px){.saved-only-filter{grid-column:1/-1}}
