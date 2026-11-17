@@ -2,6 +2,8 @@ import { Capacitor } from '@capacitor/core';
 import { PushNotifications, type PluginListenerHandle } from '@capacitor/push-notifications';
 import { supabase } from './supabase';
 
+let activePushToken: string | null = null;
+
 export async function registerPuashPushNotifications(userId: string): Promise<() => void> {
   if (!Capacitor.isNativePlatform() || !userId) return () => {};
 
@@ -25,8 +27,9 @@ export async function registerPuashPushNotifications(userId: string): Promise<()
     }
 
     listeners.push(await PushNotifications.addListener('registration', async ({ value }) => {
+      activePushToken = value;
       const { error } = await supabase.functions.invoke('register-push-token', {
-        body: { token: value, platform: Capacitor.getPlatform() },
+        body: { token: value, platform: Capacitor.getPlatform(), action: 'register' },
       });
       if (error) console.error('PUASH push token registration failed:', error.message);
     }));
@@ -52,4 +55,13 @@ export async function registerPuashPushNotifications(userId: string): Promise<()
   return () => {
     listeners.forEach(listener => { void listener.remove(); });
   };
+}
+
+export async function unregisterPuashPushNotifications(userId: string): Promise<void> {
+  if (!userId || !activePushToken) return;
+  const token = activePushToken;
+  const { error } = await supabase.functions.invoke('register-push-token', {
+    body: { token, action: 'delete' },
+  });
+  if (!error) activePushToken = null;
 }
