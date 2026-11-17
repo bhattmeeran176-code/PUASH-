@@ -6,6 +6,12 @@ import {
   CheckCircle2,
   ChevronRight,
   Grid2X2,
+  Headphones,
+  Shirt,
+  House,
+  Flower2,
+  Carrot,
+  Package,
   Heart,
   Home,
   MapPin,
@@ -51,6 +57,18 @@ const sampleCategories = [
   { name: 'Beauty', emoji: '🌸' },
   { name: 'Grocery', emoji: '🥬' },
 ];
+
+const CategoryIcon = ({ name }: { name: string }) => {
+  const normalized = name.trim().toLowerCase();
+  const Icon = normalized === 'all' ? Grid2X2
+    : normalized.includes('electronic') ? Headphones
+    : normalized.includes('fashion') || normalized.includes('cloth') ? Shirt
+    : normalized.includes('home') ? House
+    : normalized.includes('beauty') ? Flower2
+    : normalized.includes('grocer') || normalized.includes('food') ? Carrot
+    : Package;
+  return <Icon size={25} strokeWidth={1.7} aria-hidden="true" />;
+};
 
 const money = (value: number) => '₹' + value.toLocaleString('en-IN');
 
@@ -614,7 +632,7 @@ function App() {
                   setCategory(item.name); setSearch('');
                   document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' });
                 }}>
-                  <span className="home-category-emoji">{item.emoji}</span>
+                  <span className="home-category-emoji"><CategoryIcon name={item.name} /></span>
                   <strong>{item.name}</strong>
                   <small>{count > 0 ? count + (count === 1 ? ' item' : ' items') : 'Explore'}</small>
                 </button>
