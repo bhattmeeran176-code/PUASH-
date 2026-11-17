@@ -193,7 +193,7 @@ function App() {
             tone: 'cream',
             description: row.description || 'Discover this product on PUASH.',
             imageUrl: row.image_url || null,
-            stock: Number(row.stock_quantity || 0),
+            stock: (variantResult.data || []).some((v: any) => v.product_id === row.id) ? (variantResult.data || []).filter((v: any) => v.product_id === row.id && v.is_active !== false).reduce((sum: number, v: any) => sum + Number(v.stock_quantity || 0), 0) : Number(row.stock_quantity || 0),
             createdAt: row.created_at || null,
           };
         });
