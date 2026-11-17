@@ -744,7 +744,7 @@ export default function Admin() {
           <label className="admin-delivery-pin-list">Admin note<textarea value={refundDrafts[x.id]?.note??''} onChange={e=>setRefundDrafts(v=>({...v,[x.id]:{...v[x.id],note:e.target.value}}))} placeholder="Payment verification / refund reason"/></label>
           <button className="admin-primary" disabled={orderBusy===x.id} onClick={()=>void saveSellerRefund(x)}>Save refund review</button>
         </article>)}</div>}
-      </section> : {activeTab === 'settlements' ? <section className="admin-panel">
+      </section> : activeTab === 'settlements' ? <section className="admin-panel">
         <div className="admin-panel-heading"><div><span className="admin-panel-icon"><Wallet size={17}/></span><strong>Seller commission & settlements</strong></div><button className="admin-link" onClick={loadSellerSettlements} disabled={settlementsBusy}><RefreshCw size={13}/> Refresh</button></div>
         <p className="admin-shipping-help">Default commission 10% hai. Seller-wise rate yahan set karein. Rate future delivered fulfilments par apply hoga; existing settlement records change nahi honge.</p>
         <h3>Commission rates</h3>
