@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase';
 import PhoneLinkCard from './PhoneLinkCard';
+import { registerPuashPushNotifications } from './pushNotifications';
 import { ArrowLeft, Bell, CheckCircle2, LogOut, MapPin, Plus, ShieldCheck, Trash2, UserRound, X, Package, RefreshCw, ChevronDown, ChevronUp, Heart, Volume2, VolumeX } from 'lucide-react';
 
 type CustomerOrder = {
@@ -192,6 +193,20 @@ export default function Account() {
     });
     return () => { alive = false; listener.subscription.unsubscribe(); };
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    let removeListeners = () => {};
+    void registerPuashPushNotifications(user.id).then(remove => {
+      if (cancelled) remove();
+      else removeListeners = remove;
+    });
+    return () => {
+      cancelled = true;
+      removeListeners();
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
