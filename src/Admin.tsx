@@ -352,7 +352,7 @@ export default function Admin() {
     };
     const result = editingVariantId
       ? await supabase.from('product_variants').update(payload).eq('id', editingVariantId).select('id,product_id,label,price,stock_quantity,is_active,sort_order').single()
-      : await supabase.from('product_variants').insert({ ...payload, product_id: managedVariantProduct, sort_order: Math.max(-1, ...managedVariants.map(item => item.sort_order ?? -1)) + 1 }).select('id,product_id,label,price,stock_quantity,is_active').single();
+      : await supabase.from('product_variants').insert({ ...payload, product_id: managedVariantProduct, sort_order: Math.max(-1, ...managedVariants.map(item => item.sort_order ?? -1)) + 1 }).select('id,product_id,label,price,stock_quantity,is_active,sort_order').single();
     setVariantBusy(false);
     if (result.error) { setMessage('Option save nahi hua: ' + result.error.message); return; }
     setManagedVariants(current => editingVariantId
