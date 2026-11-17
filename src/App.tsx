@@ -369,7 +369,9 @@ function App() {
     .filter(product => product.reviews > 0)
     .sort((a, b) => b.reviews - a.reviews || b.rating - a.rating)
     .slice(0, 4);
+  const newArrivalIds = new Set(newArrivals.map(product => product.id));
   const recommendedProducts = [...inStockProducts]
+    .filter(product => !newArrivalIds.has(product.id))
     .sort((a, b) => {
       const discountA = a.mrp > 0 ? (a.mrp - a.price) / a.mrp : 0;
       const discountB = b.mrp > 0 ? (b.mrp - b.price) / b.mrp : 0;
