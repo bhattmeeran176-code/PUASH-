@@ -21,6 +21,8 @@ type CustomerOrder = {
   order_items: { id: string; product_name: string; unit_price: number; quantity: number }[];
 };
 
+type CustomerSellerFulfillment = {order_id:string;shop_name:string;fulfillment_status:string;seller_subtotal:number;updated_at:string};
+
 type Address = {
   id: string;
   label: string;
@@ -58,6 +60,7 @@ export default function Account() {
   const [savedProducts, setSavedProducts] = useState<any[]>([]);
   const [recentProducts, setRecentProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
+  const [sellerFulfillments,setSellerFulfillments]=useState<CustomerSellerFulfillment[]>([]);
   const ordersRef = useRef<CustomerOrder[]>([]);
   const [ordersBusy, setOrdersBusy] = useState(false);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
@@ -120,12 +123,15 @@ export default function Account() {
       setSavedProducts((wishlistData || []).filter((row: any) => row.products?.is_active).map((row: any) => ({...row.products, wishlistId: row.id})));
       ordersRef.current = (orderData || []) as CustomerOrder[];
       setOrders(ordersRef.current);
+      const orderIds=ordersRef.current.map(order=>order.id);
+      if(orderIds.length){const {data:fulfillmentData,error:fulfillmentError}=await supabase.rpc('customer_order_fulfillments',{p_order_ids:orderIds});if(fulfillmentError)setError('Seller delivery updates load nahi huye: '+fulfillmentError.message);else setSellerFulfillments((fulfillmentData||[]) as CustomerSellerFulfillment[]);}else setSellerFulfillments([]);
     } else {
       setAddresses([]);
       setNotifications([]);
       setSavedProducts([]);
       ordersRef.current = [];
       setOrders([]);
+      setSellerFulfillments([]);
     }
     setReady(true);
   };
@@ -417,6 +423,7 @@ export default function Account() {
               const current=steps.indexOf(order.status);
               return <article className="customer-order-card" key={order.id}>
                 <div className="customer-order-top"><div><strong>Order #{order.id.slice(0,8).toUpperCase()}</strong><small>{new Date(order.created_at).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'})}</small></div><span className={'customer-order-status status-'+order.status}>{labels[order.status]||order.status}</span></div>
+                {sellerFulfillments.filter(item=>item.order_id===order.id).length>0&&<section className="customer-seller-tracking"><strong><Package size={15}/> Seller-wise fulfilment</strong>{sellerFulfillments.filter(item=>item.order_id===order.id).map(item=><div className="customer-seller-tracking-row" key={item.order_id+'-'+item.shop_name}><div><b>{item.shop_name}</b><small>Seller item subtotal · ₹{Number(item.seller_subtotal).toLocaleString('en-IN')}</small></div><span className={'customer-order-status status-'+item.fulfillment_status}>{item.fulfillment_status.replaceAll('_',' ')}</span></div>)}</section>}
                 <div className="customer-order-lines">{(order.order_items||[]).map(item=><div key={item.id}><span>{item.product_name} × {item.quantity}</span><b>₹{(Number(item.unit_price)*item.quantity).toLocaleString('en-IN')}</b></div>)}</div>
                 <div className="customer-order-total"><span>Total · {order.payment_method==='cash_on_delivery'?'Cash on Delivery':order.payment_method}</span><strong>₹{Number(order.total_amount).toLocaleString('en-IN')}</strong></div>
                 {order.status==='cancelled' ? <p className="customer-order-cancelled">This order was cancelled.</p> : <div className="customer-order-progress">{steps.map((step,index)=><div className={current>=index?'done':''} key={step}><span></span><small>{labels[step]}</small></div>)}</div>}
