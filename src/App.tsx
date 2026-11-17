@@ -89,6 +89,8 @@ function App() {
   const [orderId, setOrderId] = useState('');
   const [checkoutAddresses, setCheckoutAddresses] = useState<any[]>([]);
   const [deliveryZones, setDeliveryZones] = useState<any[]>([]);
+  const [deliveryQuote, setDeliveryQuote] = useState<any>(null);
+  const [deliveryQuoteBusy, setDeliveryQuoteBusy] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState('');
   const [checkoutError, setCheckoutError] = useState('');
   const [placingOrder, setPlacingOrder] = useState(false);
@@ -263,7 +265,23 @@ function App() {
   const subtotal = cartItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
   const activeCheckoutAddress = checkoutAddresses.find(address => address.id === selectedAddressId);
   const selectedDeliveryZone = deliveryZones.find(zone => zone.district.toLowerCase() === String(activeCheckoutAddress?.district || '').toLowerCase());
-  const delivery = subtotal === 0 ? 0 : selectedDeliveryZone ? (subtotal >= Number(selectedDeliveryZone.free_delivery_threshold) ? 0 : Number(selectedDeliveryZone.delivery_fee)) : 0;
+  useEffect(() => {
+    let current = true;
+    if (!checkoutOpen || !selectedAddressId || subtotal <= 0) {
+      setDeliveryQuote(null);
+      setDeliveryQuoteBusy(false);
+      return;
+    }
+    setDeliveryQuoteBusy(true);
+    supabase.rpc('get_delivery_quote', { p_address_id: selectedAddressId, p_subtotal: subtotal }).then(({ data, error }) => {
+      if (!current) return;
+      setDeliveryQuote(error ? { serviceable: false, reason: error.message || 'Delivery could not be verified' } : data);
+      setDeliveryQuoteBusy(false);
+    });
+    return () => { current = false; };
+  }, [checkoutOpen, selectedAddressId, subtotal]);
+  const deliveryAvailable = deliveryQuote?.serviceable === true;
+  const delivery = deliveryAvailable ? Number(deliveryQuote.delivery_fee || 0) : 0;
   const total = Math.max(0, subtotal + delivery - (appliedCoupon?.discount_amount || 0));
 
   const addToCart = (product: Product) => {
@@ -977,7 +995,7 @@ function App() {
             <div className="eyebrow">SECURE CHECKOUT</div>
             <h2>Confirm your order.</h2>
             <p>Choose your saved delivery address. Payment method: Cash on Delivery.</p>
-            {activeCheckoutAddress && <div className="checkout-delivery-status"><strong>{selectedDeliveryZone ? 'Delivery available · ' + selectedDeliveryZone.district : 'Delivery not available for this district'}</strong>{selectedDeliveryZone && <small>Estimated delivery: {selectedDeliveryZone.min_delivery_days}–{selectedDeliveryZone.max_delivery_days} days · {delivery === 0 ? 'Free delivery' : money(delivery) + ' delivery fee'}</small>}</div>}
+            {activeCheckoutAddress && <div className="checkout-delivery-status"><strong>{deliveryQuoteBusy ? 'Checking delivery availability…' : deliveryAvailable ? 'Delivery available · ' + deliveryQuote.district : 'Delivery unavailable'}</strong>{deliveryQuoteBusy ? <small>Verifying your district and PIN code.</small> : deliveryAvailable ? <small>PIN code verified · Estimated delivery: {deliveryQuote.min_delivery_days}–{deliveryQuote.max_delivery_days} days · {delivery === 0 ? 'Free delivery' : money(delivery) + ' delivery fee'}</small> : <small>{deliveryQuote?.reason || 'Select an address to check delivery.'}</small>}</div>}
             {checkoutAddresses.length > 0 && <div className="checkout-address-list">
               <strong>Deliver to</strong>
               {checkoutAddresses.map((address: any) => <label className="checkout-address-option" key={address.id}>
@@ -1000,7 +1018,7 @@ function App() {
             <button
               className="primary-button full-button"
               onClick={placeOrder}
-              disabled={placingOrder || !selectedAddressId || !selectedDeliveryZone}
+              disabled={placingOrder || deliveryQuoteBusy || !selectedAddressId || !deliveryAvailable}
             >
               {placingOrder ? 'Placing order…' : 'Place Cash on Delivery order'} <Check size={17} />
             </button>
