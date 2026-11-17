@@ -694,8 +694,8 @@ function App() {
         </section>
 
         {renderHomeShelf('New arrivals', 'JUST ADDED TO PUASH', newArrivals, 'new-arrivals-title')}
-        {renderHomeShelf('Popular with shoppers', 'CUSTOMER FEEDBACK', popularProducts, 'popular-products-title')}
-        {renderHomeShelf('Picked for you', 'A LITTLE INSPIRATION', recommendedProducts, 'recommended-products-title')}
+        {renderHomeShelf('Most reviewed', 'CUSTOMER FEEDBACK', popularProducts, 'popular-products-title')}
+        {renderHomeShelf('Best offers', 'GOOD VALUE PICKS', recommendedProducts, 'recommended-products-title')}
         {renderHomeShelf('Top rated', 'CUSTOMER REVIEWS', topRatedProducts, 'top-rated-title')}
         {renderHomeShelf('Recently viewed', 'PICK UP WHERE YOU LEFT OFF', recentlyViewedProducts, 'recently-viewed-title')}
 
