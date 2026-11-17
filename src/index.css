@@ -10,8 +10,8 @@
   --muted: #77736b;
   --line: #eae7e0;
   --paper: #fffefa;
-  --orange: #c65d3b;
-  --orange-dark: #a9482d;
+  --orange: #315b48;
+  --orange-dark: #244735;
   --green: #516b55;
 }
 * {
@@ -36,7 +36,7 @@ button {
 button:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 3px solid #d99b7d;
+  outline: 3px solid #9bbba4;
   outline-offset: 2px;
 }
 .app-shell {
@@ -316,7 +316,7 @@ main {
 .orbit-two {
   width: 245px;
   height: 245px;
-  border-color: rgba(198, 93, 59, 0.23);
+  border-color: rgba(49, 91, 72, 0.23);
 }
 .hero-sun {
   position: absolute;
@@ -2304,8 +2304,8 @@ main {
   --muted: #718078;
   --line: #e6ece7;
   --paper: #ffffff;
-  --orange: #bd6848;
-  --orange-dark: #995039;
+  --orange: #315b48;
+  --orange-dark: #244735;
   --green: #315b48;
   --puash-deep: #173c31;
   --puash-soft: #f4f7f3;
@@ -2337,7 +2337,7 @@ main { max-width:1280px; }
 .hero { min-height:400px; margin-top:24px; border-radius:16px; background:linear-gradient(115deg,#f1f4ec 0%,#f5eee5 100%); }
 .hero-copy { padding-left:clamp(32px,6vw,76px); }
 .hero h1 { color:#18392f; font-size:clamp(46px,5.2vw,68px); }
-.hero h1 em { color:#b86647; }
+.hero h1 em { color:#315b48; }
 .hero-copy p { color:#68766d; }
 .primary-button { background:var(--puash-deep); border-radius:8px; padding:14px 20px; box-shadow:0 7px 16px rgba(23,60,49,.13); }
 .primary-button:hover { background:#285441; }
@@ -2494,7 +2494,7 @@ main { max-width:1280px; }
 .floating-card { animation:puash-card 5.5s ease-in-out infinite; }
 .card-two { animation-delay:-2.5s; }
 .hero-flower { animation:puash-spin 22s linear infinite; }
-.hero-spark { position:absolute; color:#bd6848; font-size:24px; animation:puash-twinkle 2.8s ease-in-out infinite; }
+.hero-spark { position:absolute; color:#315b48; font-size:24px; animation:puash-twinkle 2.8s ease-in-out infinite; }
 .spark-one { top:18%; left:23%; }
 .spark-two { right:15%; bottom:22%; animation-delay:-1s; }
 .spark-three { top:29%; right:22%; font-size:15px; animation-delay:-1.8s; }
