@@ -1,15 +1,8 @@
-export type PostalCodeParseResult = {
-  postalCodes: string[];
-  invalid: string[];
-  duplicates: number;
-  total: number;
-};
-
-export function parsePostalCodes(value: string): PostalCodeParseResult {
+export function parsePostalCodes(value) {
   const entries = value.split(/[\s,;]+/).map(pin => pin.trim()).filter(Boolean);
-  const postalCodes: string[] = [];
-  const invalid: string[] = [];
-  const seen = new Set<string>();
+  const postalCodes = [];
+  const invalid = [];
+  const seen = new Set();
   let duplicates = 0;
 
   for (const pin of entries) {
