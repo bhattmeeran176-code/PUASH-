@@ -344,6 +344,7 @@ export default function Admin() {
       ? await supabase.from('products').update(payload).eq('id', editing).select('id').single()
       : await supabase.from('products').insert(payload).select('id').single();
     if (result.error) {
+      setBusy(false);
       if (uploadedImagePath) await supabase.storage.from('product-images').remove([uploadedImagePath]);
       setMessage('Save nahi hua: ' + result.error.message);
       return;
