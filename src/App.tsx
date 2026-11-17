@@ -106,7 +106,6 @@ function App() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [orderId, setOrderId] = useState('');
   const [checkoutAddresses, setCheckoutAddresses] = useState<any[]>([]);
-  const [deliveryZones, setDeliveryZones] = useState<any[]>([]);
   const [deliveryQuote, setDeliveryQuote] = useState<any>(null);
   const [deliveryQuoteBusy, setDeliveryQuoteBusy] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState('');
@@ -120,18 +119,11 @@ function App() {
   const [toast, setToast] = useState('');
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [wishlistBusy, setWishlistBusy] = useState<string | null>(null);
-  const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([]);
 
   useEffect(() => {
     localStorage.setItem('puash-cart', JSON.stringify(cart));
   }, [cart]);
 
-  useEffect(() => {
-    try {
-      const viewed = JSON.parse(localStorage.getItem('puash-recently-viewed') || '[]');
-      setRecentlyViewedIds(Array.isArray(viewed) ? viewed.map((item: any) => String(item.id)).slice(0, 8) : []);
-    } catch { setRecentlyViewedIds([]); }
-  }, []);
 
   useEffect(() => {
     let active = true;
@@ -471,10 +463,6 @@ function App() {
     document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const inStockProducts = products.filter(product => product.stock > 0);
-  const newArrivals = [...inStockProducts]
-    .sort((a, b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || ''))
-    .slice(0, 4);
   return (
     <div className="app-shell">
       <div className="top-strip">
