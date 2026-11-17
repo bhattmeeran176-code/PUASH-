@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from './supabase';
 import {
   ArrowRight,
@@ -114,6 +114,7 @@ function App() {
   const [selectedAddressId, setSelectedAddressId] = useState('');
   const [checkoutError, setCheckoutError] = useState('');
   const [placingOrder, setPlacingOrder] = useState(false);
+  const placingOrderRef = useRef(false);
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<{code:string;coupon_id:string;discount_amount:number}|null>(null);
   const [couponBusy, setCouponBusy] = useState(false);
@@ -399,30 +400,41 @@ function App() {
   const removeCoupon = () => {setAppliedCoupon(null);setCouponInput('');setCouponError('');};
 
   const placeOrder = async () => {
-    if (!selectedAddressId || placingOrder) return;
+    if (!selectedAddressId || placingOrderRef.current) return;
+    placingOrderRef.current = true;
     setPlacingOrder(true);
     setCheckoutError('');
-    const { data, error } = await supabase.rpc('place_customer_order', {
-      p_address_id: selectedAddressId,
-      p_items: cartItems.map(item => ({
-        product_id: item.id,
-        variant_id: item.variantId,
-        quantity: item.quantity,
-      })),
-      p_customer_note: null,
-      p_coupon_code: appliedCoupon?.code || null,
-    });
-    setPlacingOrder(false);
-    if (error) {
-      setCheckoutError(error.message || 'Order place nahi ho saka. Please try again.');
-      setAppliedCoupon(null);
-      return;
+    try {
+      const { data, error } = await supabase.rpc('place_customer_order', {
+        p_address_id: selectedAddressId,
+        p_items: cartItems.map(item => ({
+          product_id: item.id,
+          variant_id: item.variantId,
+          quantity: item.quantity,
+        })),
+        p_customer_note: null,
+        p_coupon_code: appliedCoupon?.code || null,
+      });
+      if (error) {
+        setCheckoutError(error.message || 'Order place nahi ho saka. Please try again.');
+        setAppliedCoupon(null);
+        return;
+      }
+      if (!data?.order_id) {
+        setCheckoutError('Order confirmation nahi mili. Please Account mein order status check karein before retrying.');
+        return;
+      }
+      setOrderId(String(data.order_id));
+      setCart({});
+      setAppliedCoupon(null); setCouponInput(''); setCouponError('');
+      setCheckoutOpen(false);
+      setCartOpen(false);
+    } catch {
+      setCheckoutError('Network response nahi mili. Dobara order place karne se pehle Account mein check karein ke order create hua hai ya nahi.');
+    } finally {
+      placingOrderRef.current = false;
+      setPlacingOrder(false);
     }
-    setOrderId(String(data.order_id));
-    setCart({});
-    setAppliedCoupon(null); setCouponInput(''); setCouponError('');
-    setCheckoutOpen(false);
-    setCartOpen(false);
   };
 
   const startShopping = () => {
