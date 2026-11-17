@@ -942,16 +942,12 @@ function App() {
                 </div>
                 <div className="cart-summary">
                   <div>
-                    <span>Subtotal</span>
+                    <span>Items subtotal</span>
                     <strong>{money(subtotal)}</strong>
                   </div>
                   <div>
                     <span>Delivery</span>
                     <strong>Calculated at checkout</strong>
-                  </div>
-                  <div className="summary-total">
-                    <span>Items subtotal</span>
-                    <strong>{money(subtotal)}</strong>
                   </div>
                   <p>Final delivery fee and any free-delivery offer are confirmed after you select your delivery address.</p>
                   <button
@@ -1004,9 +1000,9 @@ function App() {
             </div>
             <div className="checkout-price-breakdown">
               <div><span>Subtotal</span><b>{money(subtotal)}</b></div>
-              <div><span>Delivery</span><b>{delivery===0?'FREE':money(delivery)}</b></div>
+              <div><span>Delivery</span><b>{deliveryQuoteBusy ? 'Checking…' : deliveryAvailable ? (delivery===0?'FREE':money(delivery)) : 'Unavailable'}</b></div>
               {appliedCoupon && <div className="checkout-discount"><span>Coupon ({appliedCoupon.code})</span><b>−{money(appliedCoupon.discount_amount)}</b></div>}
-              <div className="checkout-total"><span>Estimated order total</span><strong>{money(total)}</strong></div>
+              <div className="checkout-total"><span>{deliveryAvailable ? 'Estimated order total' : 'Items subtotal'}</span><strong>{deliveryAvailable ? money(total) : '—'}</strong></div>
             </div>
             {checkoutError && <div className="account-error">{checkoutError}</div>}
             <button
