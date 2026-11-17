@@ -42,3 +42,93 @@
 
 
 .seller-earnings-panel{margin-bottom:16px}.seller-earning-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}.seller-earning-summary>div{background:#f5f3ec;border:1px solid #e9e5dc;border-radius:13px;padding:13px;min-width:0}.seller-earning-summary span{display:block;color:#777166;font-size:10px;font-weight:700;margin-bottom:6px}.seller-earning-summary strong{display:block;color:#294b36;font-size:18px;overflow-wrap:anywhere}.seller-earning-list{display:grid;gap:9px;margin-top:12px}.seller-earning-row{border:1px solid #e9e5dc;border-radius:13px;padding:12px;background:#fff}.seller-earning-values{display:grid;gap:7px;margin:11px 0}.seller-earning-values span{display:flex;justify-content:space-between;gap:12px;color:#716b60;font-size:11px}.seller-earning-values strong{color:#344b38;text-align:right}.seller-earning-row>small{display:block;color:#777166;font-size:10px;border-top:1px solid #eee9df;padding-top:8px}.seller-order-status.pending{background:#fff2d9;color:#8b5c12}.seller-order-status.paid{background:#e7f3e8;color:#27623a}.seller-order-status.on_hold{background:#fcebea;color:#a33c35}@media(min-width:700px){.seller-earning-summary{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+
+/* PUASH seller workspace: premium partner dashboard */
+.seller-page{width:min(1120px,100%);max-width:1120px;padding:34px 24px 80px;margin:0 auto}
+.seller-back{padding:9px 12px;border:1px solid #e4e9df;border-radius:999px;background:rgba(255,254,250,.72);transition:all .2s ease}
+.seller-back:hover{color:#315b48;border-color:#c7d8c6;background:#f1f6ee}
+.seller-hero{position:relative;isolation:isolate;overflow:hidden;min-height:228px;padding:38px 42px;border:1px solid rgba(255,255,255,.12);border-radius:22px;background:radial-gradient(circle at 86% 16%,rgba(202,220,187,.2),transparent 28%),linear-gradient(120deg,#203e2e 0%,#315b48 58%,#42674e 100%);box-shadow:0 18px 45px rgba(34,65,45,.13)}
+.seller-hero:after{content:"";position:absolute;z-index:-1;width:290px;height:290px;right:-75px;bottom:-195px;border:1px solid rgba(255,255,255,.14);border-radius:50%;box-shadow:0 0 0 28px rgba(255,255,255,.035),0 0 0 58px rgba(255,255,255,.025)}
+.seller-hero-icon{width:48px;height:48px;margin-bottom:22px;border-radius:15px;background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.2);color:#e8d1ae}
+.seller-hero h1{max-width:600px;font-size:clamp(34px,5vw,52px);letter-spacing:-.035em}
+.seller-hero p{max-width:560px;font-size:13px;color:#e0e9de}
+.seller-kicker{color:#8b9e80;font-size:9px;letter-spacing:.18em}
+.seller-hero .seller-kicker{color:#e4c9a4}
+.seller-dashboard{gap:18px}
+.seller-dashboard>.seller-panel{min-width:0;padding:25px 27px;border:1px solid #e4e9df;border-radius:18px;background:rgba(255,254,250,.96);box-shadow:0 9px 28px rgba(39,57,41,.045);transition:box-shadow .2s ease,border-color .2s ease}
+.seller-dashboard>.seller-panel:hover{border-color:#d7e1d4;box-shadow:0 13px 34px rgba(39,57,41,.065)}
+.seller-status-panel{position:relative;overflow:hidden;display:grid;grid-template-columns:auto 1fr;column-gap:15px;align-items:center;padding:23px 27px!important;background:linear-gradient(115deg,#f0f6ed,#fffefa)!important;border-color:#dce8d9!important}
+.seller-status-panel>svg{grid-row:span 2;width:30px;height:30px;color:#477451}
+.seller-status-panel h2{font-family:inherit;font-size:20px;font-weight:800;color:#2d4935}
+.seller-status-panel p{grid-column:2;margin:3px 0 0;font-size:11px}
+.seller-form-heading{align-items:center;margin-bottom:12px}
+.seller-form-heading h2,.seller-dashboard .seller-form-heading h2{font-family:inherit;color:#2c4332;font-size:20px;font-weight:800;letter-spacing:-.025em}
+.seller-form-heading h2 svg{color:#52765a}
+.seller-refresh{min-height:36px;padding:8px 12px;border:1px solid #dfe7dc;border-radius:9px;background:#f8faf5;color:#46634b;font-weight:700;transition:all .18s ease}
+.seller-refresh:hover:not(:disabled){border-color:#b9cdb8;background:#edf4e9}
+.seller-form{gap:17px}
+.seller-form label{gap:8px;color:#526052;font-size:11px}
+.seller-form input,.seller-form select,.seller-form textarea{min-height:43px;padding:11px 13px;border:1px solid #dfe6dc;border-radius:10px;background:#fffefa;color:#344538;font-size:12px;transition:border-color .18s ease,box-shadow .18s ease}
+.seller-form textarea{min-height:94px}
+.seller-form input:focus,.seller-form select:focus,.seller-form textarea:focus{outline:0;border-color:#7f9d82;box-shadow:0 0 0 3px rgba(49,91,72,.1)}
+.seller-form input[type=file]{min-height:42px;border-style:dashed;background:#f7f8f3}
+.seller-submit{min-height:46px;border-radius:10px;background:linear-gradient(135deg,#315b48,#244735);box-shadow:0 6px 15px rgba(36,71,53,.13);transition:transform .18s ease,box-shadow .18s ease}
+.seller-submit:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 9px 20px rgba(36,71,53,.2)}
+.seller-error,.seller-success{border-radius:10px}
+.seller-earning-summary{gap:12px;margin:17px 0}
+.seller-earning-summary>div{min-height:100px;display:flex;flex-direction:column;justify-content:space-between;padding:16px;border:1px solid #e4e9df;border-radius:14px;background:linear-gradient(145deg,#f8f9f4,#f0f4eb)}
+.seller-earning-summary>div:first-child{background:linear-gradient(145deg,#edf5e9,#e4eee0);border-color:#d7e5d3}
+.seller-earning-summary span{font-size:10px;letter-spacing:.01em;color:#738071}
+.seller-earning-summary strong{font-size:clamp(17px,2vw,22px);letter-spacing:-.03em;color:#294b36}
+.seller-earning-row,.seller-order-card{padding:16px;border:1px solid #e5eae1;border-radius:14px;background:#fffefa;box-shadow:0 3px 12px rgba(43,61,44,.025)}
+.seller-order-top{gap:10px}
+.seller-order-top strong{color:#344a39;font-size:12px}
+.seller-order-card>small{color:#899185}
+.seller-order-status{border:1px solid #e9e9df;font-size:9px;letter-spacing:.02em}
+.seller-order-items{border-color:#edf0e9}
+.seller-order-items>div{gap:12px;color:#6c766b;font-size:11px}
+.seller-order-items strong,.seller-order-total strong{color:#344b38}
+.seller-order-total{border-color:#e8ede5}
+.seller-order-address{padding:11px 12px;border-radius:9px;background:#f6f8f2;color:#687568;font-size:10px}
+.seller-order-actions{border-color:#e8ede5}
+.seller-order-actions label{color:#59685a}
+.seller-order-actions select{min-height:38px;border-color:#dfe6dc;border-radius:9px;background:#f9faf6;color:#315b48}
+.seller-product-row{gap:14px;padding:15px 0;border-color:#edf0e9}
+.seller-product-row img{width:68px;height:68px;flex:0 0 68px;border:1px solid #edf0e9;border-radius:12px;background:#f7f7f1}
+.seller-product-row>div{flex:1;min-width:0;gap:5px}
+.seller-product-row strong{color:#344a39;font-size:12px}
+.seller-product-row span{color:#667365;font-size:10px}
+.seller-product-row small{font-size:9px}
+.seller-edit{padding:6px 0;color:#315b48;font-size:10px}
+.seller-footnote{color:#849082;font-size:10px;line-height:1.7}
+.seller-pending{border:1px solid #efe2ca;background:#fbf5e9;color:#896536}
+.seller-admin-note{border:1px solid #e9e4d9;border-radius:10px}
+.seller-login-panel{padding:30px;border:1px solid #e3e9df;border-radius:18px;background:#fffefa}
+.seller-login-panel>svg{color:#315b48}
+.seller-login-panel h2{font-family:inherit;color:#2e4936;font-weight:800}
+@media(max-width:700px){
+ .seller-page{padding:17px 13px calc(76px + env(safe-area-inset-bottom))}
+ .seller-back{margin-bottom:16px}
+ .seller-hero{min-height:0;padding:27px 23px;border-radius:17px;margin-bottom:15px}
+ .seller-hero-icon{width:43px;height:43px;margin-bottom:17px}
+ .seller-hero h1{font-size:clamp(31px,9vw,40px)}
+ .seller-hero p{font-size:11px}
+ .seller-dashboard{gap:13px}
+ .seller-dashboard>.seller-panel{padding:18px 15px;border-radius:15px}
+ .seller-status-panel{grid-template-columns:auto 1fr;padding:18px 15px!important;column-gap:11px}
+ .seller-status-panel h2{font-size:17px}
+ .seller-form-heading{align-items:flex-start}
+ .seller-form-heading h2,.seller-dashboard .seller-form-heading h2{font-size:18px}
+ .seller-earning-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .seller-earning-summary>div{min-height:88px;padding:12px}
+ .seller-earning-summary strong{font-size:17px}
+ .seller-order-card,.seller-earning-row{padding:13px}
+ .seller-order-actions label{align-items:flex-start;flex-direction:column}
+ .seller-order-actions select{width:100%;max-width:none;min-height:42px}
+ .seller-product-row img{width:60px;height:60px;flex-basis:60px}
+}
+@media(prefers-reduced-motion:reduce){
+ .seller-back,.seller-dashboard>.seller-panel,.seller-refresh,.seller-submit{transition:none}
+ .seller-submit:hover:not(:disabled){transform:none}
+}
