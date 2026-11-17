@@ -405,15 +405,45 @@ function App() {
     setPlacingOrder(true);
     setCheckoutError('');
     try {
+      const orderItems = cartItems.map(item => ({
+        product_id: item.id,
+        variant_id: item.variantId,
+        quantity: item.quantity,
+      }));
+      const couponCode = appliedCoupon?.code || null;
+      const requestFingerprint = JSON.stringify({
+        addressId: selectedAddressId,
+        items: orderItems,
+        customerNote: null,
+        couponCode: couponCode?.trim().toUpperCase() || null,
+      });
+      let idempotencyKey = '';
+      try {
+        const saved = JSON.parse(sessionStorage.getItem('puash-checkout-request') || 'null');
+        if (saved?.fingerprint === requestFingerprint && saved?.key) {
+          idempotencyKey = saved.key;
+        }
+      } catch { /* Start a fresh request if session storage is unavailable. */ }
+      if (!idempotencyKey) {
+        idempotencyKey = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, char => {
+              const random = Math.random() * 16 | 0;
+              return (char === 'x' ? random : (random & 0x3 | 0x8)).toString(16);
+            });
+        try {
+          sessionStorage.setItem('puash-checkout-request', JSON.stringify({
+            fingerprint: requestFingerprint,
+            key: idempotencyKey,
+          }));
+        } catch { /* Server-side protection still applies for this attempt. */ }
+      }
       const { data, error } = await supabase.rpc('place_customer_order', {
         p_address_id: selectedAddressId,
-        p_items: cartItems.map(item => ({
-          product_id: item.id,
-          variant_id: item.variantId,
-          quantity: item.quantity,
-        })),
+        p_items: orderItems,
         p_customer_note: null,
-        p_coupon_code: appliedCoupon?.code || null,
+        p_coupon_code: couponCode,
+        p_idempotency_key: idempotencyKey,
       });
       if (error) {
         setCheckoutError(error.message || 'Order place nahi ho saka. Please try again.');
@@ -425,6 +455,7 @@ function App() {
         return;
       }
       setOrderId(String(data.order_id));
+      try { sessionStorage.removeItem('puash-checkout-request'); } catch { /* Ignore unavailable storage. */ }
       setCart({});
       setAppliedCoupon(null); setCouponInput(''); setCouponError('');
       setCheckoutOpen(false);
