@@ -346,10 +346,12 @@ export default function Admin() {
   const updateAdminFulfilment = async (id:string,status:string) => {
     if(!['confirmed','processing','shipped','delivered','cancelled'].includes(status))return;
     setOrderBusy(id);setMessage('');
-    const {error}=await supabase.from('seller_fulfillments').update({status,updated_at:new Date().toISOString()}).eq('id',id);
+    const result = status === 'cancelled'
+      ? await supabase.rpc('admin_cancel_seller_fulfillment',{p_fulfillment_id:id})
+      : await supabase.from('seller_fulfillments').update({status,updated_at:new Date().toISOString()}).eq('id',id);
     setOrderBusy(null);
-    if(error)setMessage('Seller fulfilment update nahi hua: '+error.message);
-    else{setMessage('Seller fulfilment status update ho gaya.');await loadSellerFulfilments();}
+    if(result.error)setMessage('Seller fulfilment update nahi hua: '+result.error.message);
+    else{setMessage(status==='cancelled'?'Seller fulfilment cancel ho gaya; sirf isi seller ka stock restore hua.':'Seller fulfilment status update ho gaya.');await loadSellerFulfilments();await loadSellerSettlements();}
   };
   const loadSellerApplications = async () => {
     setBusy(true);
