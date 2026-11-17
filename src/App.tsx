@@ -73,6 +73,7 @@ function App() {
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [minRating, setMinRating] = useState('0');
+  const [savedOnly, setSavedOnly] = useState(false);
   const [cart, setCart] = useState<Record<string, number>>(() => {
     try {
       return JSON.parse(localStorage.getItem('puash-cart') || '{}');
@@ -233,13 +234,14 @@ function App() {
       const matchesMinPrice = minPrice === '' || product.price >= Number(minPrice);
       const matchesMaxPrice = maxPrice === '' || product.price <= Number(maxPrice);
       const matchesRating = product.rating >= Number(minRating);
-      return matchesCategory && matchesSearch && matchesMinPrice && matchesMaxPrice && matchesRating;
+      const matchesSaved = !savedOnly || wishlist.includes(product.id);
+      return matchesCategory && matchesSearch && matchesMinPrice && matchesMaxPrice && matchesRating && matchesSaved;
     });
     if (sort === 'low') list = [...list].sort((a, b) => a.price - b.price);
     if (sort === 'high') list = [...list].sort((a, b) => b.price - a.price);
     if (sort === 'rating') list = [...list].sort((a, b) => b.rating - a.rating);
     return list;
-  }, [category, search, sort, products, minPrice, maxPrice, minRating]);
+  }, [category, search, sort, products, minPrice, maxPrice, minRating, savedOnly, wishlist]);
 
   const cartItems = products.filter(product => (cart[product.id] || 0) > 0);
   const cartCount = Object.values(cart).reduce(
@@ -679,7 +681,7 @@ function App() {
             <label className="filter-field"><span>Min price (₹)</span><input inputMode="numeric" type="number" min="0" placeholder="No minimum" value={minPrice} onChange={event => setMinPrice(event.target.value)}/></label>
             <label className="filter-field"><span>Max price (₹)</span><input inputMode="numeric" type="number" min="0" placeholder="No maximum" value={maxPrice} onChange={event => setMaxPrice(event.target.value)}/></label>
             <label className="filter-field"><span>Minimum rating</span><select value={minRating} onChange={event => setMinRating(event.target.value)}><option value="0">Any rating</option><option value="3">3★ & above</option><option value="4">4★ & above</option><option value="4.5">4.5★ & above</option></select></label>
-            <button type="button" className="clear-filter-button" onClick={() => { setMinPrice(''); setMaxPrice(''); setMinRating('0'); setSort('featured'); setSearch(''); setCategory('All'); }}>Clear filters</button>
+            <label className="saved-only-filter"><input type="checkbox" checked={savedOnly} onChange={event => setSavedOnly(event.target.checked)}/> Saved items only</label><button type="button" className="clear-filter-button" onClick={() => { setMinPrice(''); setMaxPrice(''); setMinRating('0'); setSavedOnly(false); setSort('featured'); setSearch(''); setCategory('All'); }}>Clear filters</button>
           </div>
           {minPrice !== '' && maxPrice !== '' && Number(minPrice) > Number(maxPrice) && <p className="filter-validation" role="alert">Minimum price cannot be greater than maximum price.</p>}
           {minPrice !== '' && maxPrice !== '' && Number(minPrice) > Number(maxPrice) ? <div className="empty-results"><h3>Check your price range</h3><p>Minimum price should not exceed maximum price.</p></div> : visibleProducts.length > 0 ? (
