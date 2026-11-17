@@ -16,7 +16,7 @@ type SellerApplication = {
   status: 'pending' | 'approved' | 'rejected';
   admin_note: string | null;
 };
-type SellerProduct = { id:string; name:string; price:number; compare_at_price:number|null; stock_quantity:number; image_url:string|null; is_active:boolean; created_at:string };
+type SellerProduct = { id:string; name:string; description:string|null; price:number; compare_at_price:number|null; stock_quantity:number; image_url:string|null; is_active:boolean; created_at:string };
 
 const emptyForm = {
   shop_name: '', contact_name: '', phone: '', category: 'General store',
@@ -37,6 +37,8 @@ export default function Seller() {
   const [productMessage, setProductMessage] = useState('');
   const [productError, setProductError] = useState('');
   const [productForm, setProductForm] = useState({name:'',description:'',price:'',compare_at_price:'',stock_quantity:'1',image_url:'',category_id:''});
+  const [imageFile,setImageFile]=useState<File|null>(null);
+  const [editingProduct,setEditingProduct]=useState<string|null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -71,7 +73,7 @@ export default function Seller() {
   const loadSellerProducts = async () => {
     if (!application) return;
     const [{data:items,error:itemsError},{data:cats}] = await Promise.all([
-      supabase.from('products').select('id,name,price,compare_at_price,stock_quantity,image_url,is_active,created_at').eq('seller_application_id',application.id).order('created_at',{ascending:false}),
+      supabase.from('products').select('id,name,description,price,compare_at_price,stock_quantity,image_url,is_active,created_at').eq('seller_application_id',application.id).order('created_at',{ascending:false}),
       supabase.from('categories').select('id,name').eq('is_active',true).order('name')
     ]);
     if(itemsError){setProductError('Products load nahi hue: '+itemsError.message);return;}
@@ -98,7 +100,7 @@ export default function Seller() {
     });
     setProductBusy(false);
     if(saveError){setProductError('Product save nahi hua: '+saveError.message);return;}
-    setProductForm({name:'',description:'',price:'',compare_at_price:'',stock_quantity:'1',image_url:'',category_id:''});
+    setProductForm({name:'',description:'',price:'',compare_at_price:'',stock_quantity:'1',image_url:'',category_id:''});setImageFile(null);setEditingProduct(null);
     setProductMessage('Product admin review ke liye submit ho gaya. Approval se pehle storefront par visible nahi hoga.');
     await loadSellerProducts();
   };
@@ -155,19 +157,19 @@ export default function Seller() {
         <section className="seller-dashboard">
           <div className="seller-panel seller-status-panel"><CheckCircle2 size={28}/><h2>{application.shop_name}</h2><p>Your seller account is approved. Products submitted here remain unpublished until PUASH admin review.</p></div>
           <form className="seller-panel seller-form" onSubmit={addSellerProduct}>
-            <div className="seller-form-heading"><div><span className="seller-kicker">SELLER CATALOGUE</span><h2><PackagePlus size={20}/> Add a product</h2></div></div>
+            <div className="seller-form-heading"><div><span className="seller-kicker">SELLER CATALOGUE</span><h2><PackagePlus size={20}/> {editingProduct?'Edit product draft':'Add a product'}</h2></div></div>
             <label>Product name<input required minLength={2} maxLength={160} value={productForm.name} onChange={e=>setProductForm(v=>({...v,name:e.target.value}))} placeholder="Product name"/></label>
             <label>Category<select value={productForm.category_id} onChange={e=>setProductForm(v=>({...v,category_id:e.target.value}))}><option value="">Choose category</option>{categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
             <label>Selling price (₹)<input required type="number" min="0.01" step="0.01" value={productForm.price} onChange={e=>setProductForm(v=>({...v,price:e.target.value}))}/></label>
             <label>MRP (₹) <span className="seller-optional">optional</span><input type="number" min="0.01" step="0.01" value={productForm.compare_at_price} onChange={e=>setProductForm(v=>({...v,compare_at_price:e.target.value}))}/></label>
             <label>Available stock<input required type="number" min="0" step="1" value={productForm.stock_quantity} onChange={e=>setProductForm(v=>({...v,stock_quantity:e.target.value}))}/></label>
-            <label>Product image URL<input type="url" value={productForm.image_url} onChange={e=>setProductForm(v=>({...v,image_url:e.target.value}))} placeholder="https://…"/></label>
+            <label>Product image URL <span className="seller-optional">or upload image</span><input type="url" value={productForm.image_url} onChange={e=>setProductForm(v=>({...v,image_url:e.target.value}))} placeholder="https://…"/><input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setImageFile(e.target.files?.[0]||null)}/><span className="seller-optional">JPG, PNG, WebP · max 5 MB</span></label>
             <label className="seller-full-field">Description<textarea rows={4} maxLength={5000} value={productForm.description} onChange={e=>setProductForm(v=>({...v,description:e.target.value}))}/></label>
             {productError&&<div className="seller-error" role="alert">{productError}</div>}{productMessage&&<div className="seller-success" role="status">{productMessage}</div>}
-            <button className="seller-submit" type="submit" disabled={productBusy}>{productBusy?'Submitting…':'Submit product for review'}</button>
+            <button className="seller-submit" type="submit" disabled={productBusy}>{productBusy?'Saving…':editingProduct?'Save draft changes':'Submit product for review'}</button>
           </form>
           <section className="seller-panel"><div className="seller-form-heading"><h2><Package size={20}/> My products</h2><button type="button" className="seller-refresh" onClick={loadSellerProducts}><RefreshCw size={15}/> Refresh</button></div>
-            {products.length===0?<p className="seller-footnote">Abhi koi product submit nahi hua.</p>:products.map(p=><article className="seller-product-row" key={p.id}>{p.image_url&&<img src={p.image_url} alt="" /> }<div><strong>{p.name}</strong><span>₹{Number(p.price).toLocaleString('en-IN')} · Stock {p.stock_quantity}</span><small>{p.is_active?'Published':'Pending admin review'}</small></div></article>)}
+            {products.length===0?<p className="seller-footnote">Abhi koi product submit nahi hua.</p>:products.map(p=><article className="seller-product-row" key={p.id}>{p.image_url&&<img src={p.image_url} alt="" /> }<div><strong>{p.name}</strong><span>₹{Number(p.price).toLocaleString('en-IN')} · Stock {p.stock_quantity}</span><small>{p.is_active?'Published':'Pending admin review'}</small>{!p.is_active&&<button type="button" className="seller-edit" onClick={()=>{setEditingProduct(p.id);setProductForm({name:p.name,description:p.description||'',price:String(p.price),compare_at_price:p.compare_at_price==null?'':String(p.compare_at_price),stock_quantity:String(p.stock_quantity),image_url:p.image_url||'',category_id:''});setProductMessage('Editing draft: '+p.name);}}>Edit draft</button>}</div></article>)}
           </section>
         </section>
       ) : application && application.status !== 'pending' ? (
