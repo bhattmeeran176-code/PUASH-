@@ -92,7 +92,7 @@ export default function ProductDetail() {
         const liveVariants = (variantRows || []) as ProductVariant[];
         setVariants(liveVariants);
         setSelectedVariantId(liveVariants.find(item => item.stock_quantity > 0)?.id || liveVariants[0]?.id || '');
-        const category = Array.isArray(data.categories) ? data.categories[0]?.name : data.categories?.name;
+        const category = (data as any).categories?.[0]?.name || (data as any).categories?.name;
         const viewedProduct = {
           id: data.id, name: data.name,
           description: data.description || 'Discover this product on PUASH.',
