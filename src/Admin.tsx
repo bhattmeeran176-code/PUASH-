@@ -5,11 +5,12 @@ import { validateProductPublishing } from './utils/product-publishing.js';
 import { isGalleryWithinLimit } from './utils/gallery-validation.js';
 import { FormEvent, useEffect, useState } from 'react';
 import { supabase } from './supabase';
-import { ArrowLeft, BarChart3, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X, AlertTriangle, TrendingUp, Users, UserRound, ChevronDown, ChevronUp, Download, Activity, Truck } from 'lucide-react';
+import { ArrowLeft, BarChart3, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X, AlertTriangle, TrendingUp, Users, UserRound, ChevronDown, ChevronUp, Download, Activity, Truck, Store } from 'lucide-react';
 
 type Category = { id: string; name: string };
 type OrderItem = { id: string; product_id?: string | null; product_name: string; unit_price: number; quantity: number };
 type Order = { id: string; user_id: string; status: string; total_amount: number; subtotal_amount: number | null; delivery_fee: number; payment_method: string; shipping_address: any; customer_note: string | null; created_at: string; coupon_code: string | null; discount_amount: number; courier_name: string | null; tracking_number: string | null; shipped_at: string | null; delivered_at: string | null; order_items: OrderItem[] };
+type SellerApplication = { id:string; user_id:string; shop_name:string; contact_name:string; phone:string; category:string; pickup_address:string; city:string; district:string; postal_code:string; notes:string|null; status:'pending'|'approved'|'rejected'; admin_note:string|null; created_at:string };
 type Customer = { customer_id: string; email: string | null; full_name: string | null; joined_at: string; order_count: number; delivered_spend: number };
 type ActivityLog = { id:string; actor_id:string|null; actor_name:string; action:string; entity_type:string; entity_id:string|null; entity_label:string; summary:string; old_data:Record<string,any>; new_data:Record<string,any>; created_at:string };
 type StockMovement = { id:string; product_id:string|null; product_name:string; previous_stock:number; new_stock:number; change_quantity:number; movement_type:string; actor_id:string|null; created_at:string };
@@ -54,6 +55,8 @@ export default function Admin() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [sellerApplications, setSellerApplications] = useState<SellerApplication[]>([]);
+  const [sellerReviewNotes, setSellerReviewNotes] = useState<Record<string,string>>({});
   const [returnRequests, setReturnRequests] = useState<ReturnRequest[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
@@ -75,7 +78,7 @@ export default function Admin() {
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [customerLoading, setCustomerLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'sales' | 'analytics' | 'products' | 'orders' | 'customers' | 'returns' | 'coupons' | 'inventory' | 'activity' | 'delivery'>('sales');
+  const [activeTab, setActiveTab] = useState<'sales' | 'analytics' | 'products' | 'orders' | 'customers' | 'returns' | 'coupons' | 'inventory' | 'activity' | 'delivery' | 'sellers'>('sales');
   const [analyticsRange, setAnalyticsRange] = useState<'7'|'30'|'90'|'365'>('30');
   const [orderBusy, setOrderBusy] = useState<string | null>(null);
   const [shippingDrafts, setShippingDrafts] = useState<Record<string, { courier: string; tracking: string }>>({});
@@ -300,6 +303,31 @@ export default function Admin() {
     setOrderBusy(null);
     if (error) setMessage('Return request update nahi hui: ' + error.message);
     else { setMessage('Return request update ho gayi.'); await loadReturnRequests(); }
+  };
+
+  const loadSellerApplications = async () => {
+    setBusy(true);
+    const { data, error } = await supabase.from('seller_applications')
+      .select('id,user_id,shop_name,contact_name,phone,category,pickup_address,city,district,postal_code,notes,status,admin_note,created_at')
+      .order('created_at', { ascending: false });
+    if (error) setMessage('Seller applications load nahi hui: ' + error.message);
+    else setSellerApplications((data || []) as SellerApplication[]);
+    setBusy(false);
+  };
+
+  const reviewSellerApplication = async (application: SellerApplication, status: 'approved'|'rejected') => {
+    if (orderBusy === application.id) return;
+    const note = sellerReviewNotes[application.id]?.trim() || null;
+    setOrderBusy(application.id); setMessage('');
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) { setOrderBusy(null); setMessage('Admin session expire ho gaya. Dobara sign in karein.'); return; }
+    const { error } = await supabase.from('seller_applications').update({
+      status, admin_note: note, reviewed_at: new Date().toISOString(), reviewed_by: auth.user.id,
+      updated_at: new Date().toISOString(),
+    }).eq('id', application.id).eq('status', 'pending');
+    setOrderBusy(null);
+    if (error) setMessage('Seller application update nahi hui: ' + error.message);
+    else { setMessage(application.shop_name + ' application ' + status + ' ho gayi.'); await loadSellerApplications(); }
   };
 
   const loadCustomers = async () => {
@@ -615,8 +643,8 @@ export default function Admin() {
   return <div className="admin-screen">
     <header className="admin-header"><a href="/" className="admin-brand"><span>PUASH.</span><small>ADMIN</small></a><button className="admin-logout" onClick={()=>supabase.auth.signOut()}><LogOut size={16}/> Sign out</button></header>
     <main className="admin-main">
-      <div className="admin-title-row"><div><div className="admin-kicker">STORE CONTROL</div><h1>{activeTab === 'sales' ? 'Sales dashboard' : activeTab === 'analytics' ? 'Advanced analytics' : activeTab === 'products' ? 'Products' : activeTab === 'inventory' ? 'Inventory management' : activeTab === 'delivery' ? 'Delivery settings' : activeTab === 'activity' ? 'Admin activity logs' : activeTab === 'coupons' ? 'Coupons & discounts' : activeTab === 'returns' ? 'Returns' : activeTab === 'customers' ? 'Customers' : 'Orders'}</h1><p>{activeTab === 'sales' ? 'Your store performance at a glance.' : activeTab === 'analytics' ? 'Date-wise revenue, order trends and product performance.' : activeTab === 'products' ? 'Add, edit and publish products on your PUASH store.' : activeTab === 'inventory' ? 'Track stock levels and review every recorded stock movement.' : activeTab === 'delivery' ? 'Set district-wise serviceability, delivery charges and estimated delivery windows.' : activeTab === 'activity' ? 'Review important changes made by store administrators.' : activeTab === 'coupons' ? 'Create and manage customer discount codes.' : activeTab === 'returns' ? 'Review and manage customer return requests.' : activeTab === 'customers' ? 'View customer accounts and order history.' : 'Review customer orders and update their fulfilment status.'}</p></div><button className="admin-refresh" onClick={() => { loadData(); loadOrders(); loadDeliveryZones(); }}><RefreshCw size={16}/> Refresh</button></div>
-      <nav className="admin-tabs"><button className={activeTab === 'sales' ? 'active' : ''} onClick={() => setActiveTab('sales')}><BarChart3 size={16}/> Dashboard</button><button className={activeTab === 'analytics' ? 'active' : ''} onClick={() => setActiveTab('analytics')}><TrendingUp size={16}/> Analytics</button><button className={activeTab === 'products' ? 'active' : ''} onClick={() => setActiveTab('products')}><Package size={16}/> Products <span>{products.length}</span></button><button className={activeTab === 'orders' ? 'active' : ''} onClick={() => setActiveTab('orders')}><ClipboardList size={16}/> Orders <span>{genuineOrders.length}</span></button><button className={activeTab === 'customers' ? 'active' : ''} onClick={() => { setActiveTab('customers'); loadCustomers(); }}><Users size={16}/> Customers <span>{customers.length}</span></button><button className={activeTab === 'returns' ? 'active' : ''} onClick={() => { setActiveTab('returns'); loadReturnRequests(); }}><RefreshCw size={16}/> Returns <span>{returnRequests.filter(item=>item.status==='pending').length}</span></button><button className={activeTab === 'coupons' ? 'active' : ''} onClick={() => { setActiveTab('coupons'); loadCoupons(); }}><Save size={16}/> Coupons <span>{coupons.filter(c=>c.is_active).length}</span></button><button className={activeTab === 'inventory' ? 'active' : ''} onClick={() => { setActiveTab('inventory'); loadStockMovements(); }}><ClipboardList size={16}/> Inventory <span>{products.filter(p=>p.is_active && p.stock_quantity<=5).length}</span></button><button className={activeTab === 'activity' ? 'active' : ''} onClick={() => { setActiveTab('activity'); loadActivityLogs(); }}><Activity size={16}/> Activity <span>{activityLogs.length}</span></button><button className={activeTab === 'delivery' ? 'active' : ''} onClick={() => { setActiveTab('delivery'); loadDeliveryZones(); }}><Truck size={16}/> Delivery zones <span>{deliveryZones.length}</span></button></nav>
+      <div className="admin-title-row"><div><div className="admin-kicker">STORE CONTROL</div><h1>{activeTab === 'sales' ? 'Sales dashboard' : activeTab === 'analytics' ? 'Advanced analytics' : activeTab === 'products' ? 'Products' : activeTab === 'inventory' ? 'Inventory management' : activeTab === 'sellers' ? 'Seller applications' : activeTab === 'delivery' ? 'Delivery settings' : activeTab === 'activity' ? 'Admin activity logs' : activeTab === 'coupons' ? 'Coupons & discounts' : activeTab === 'returns' ? 'Returns' : activeTab === 'customers' ? 'Customers' : 'Orders'}</h1><p>{activeTab === 'sales' ? 'Your store performance at a glance.' : activeTab === 'analytics' ? 'Date-wise revenue, order trends and product performance.' : activeTab === 'products' ? 'Add, edit and publish products on your PUASH store.' : activeTab === 'inventory' ? 'Track stock levels and review every recorded stock movement.' : activeTab === 'sellers' ? 'Review local shop applications and approve eligible sellers.' : activeTab === 'delivery' ? 'Set district-wise serviceability, delivery charges and estimated delivery windows.' : activeTab === 'activity' ? 'Review important changes made by store administrators.' : activeTab === 'coupons' ? 'Create and manage customer discount codes.' : activeTab === 'returns' ? 'Review and manage customer return requests.' : activeTab === 'customers' ? 'View customer accounts and order history.' : 'Review customer orders and update their fulfilment status.'}</p></div><button className="admin-refresh" onClick={() => { loadData(); loadOrders(); loadDeliveryZones(); }}><RefreshCw size={16}/> Refresh</button></div>
+      <nav className="admin-tabs"><button className={activeTab === 'sales' ? 'active' : ''} onClick={() => setActiveTab('sales')}><BarChart3 size={16}/> Dashboard</button><button className={activeTab === 'analytics' ? 'active' : ''} onClick={() => setActiveTab('analytics')}><TrendingUp size={16}/> Analytics</button><button className={activeTab === 'products' ? 'active' : ''} onClick={() => setActiveTab('products')}><Package size={16}/> Products <span>{products.length}</span></button><button className={activeTab === 'orders' ? 'active' : ''} onClick={() => setActiveTab('orders')}><ClipboardList size={16}/> Orders <span>{genuineOrders.length}</span></button><button className={activeTab === 'customers' ? 'active' : ''} onClick={() => { setActiveTab('customers'); loadCustomers(); }}><Users size={16}/> Customers <span>{customers.length}</span></button><button className={activeTab === 'returns' ? 'active' : ''} onClick={() => { setActiveTab('returns'); loadReturnRequests(); }}><RefreshCw size={16}/> Returns <span>{returnRequests.filter(item=>item.status==='pending').length}</span></button><button className={activeTab === 'coupons' ? 'active' : ''} onClick={() => { setActiveTab('coupons'); loadCoupons(); }}><Save size={16}/> Coupons <span>{coupons.filter(c=>c.is_active).length}</span></button><button className={activeTab === 'inventory' ? 'active' : ''} onClick={() => { setActiveTab('inventory'); loadStockMovements(); }}><ClipboardList size={16}/> Inventory <span>{products.filter(p=>p.is_active && p.stock_quantity<=5).length}</span></button><button className={activeTab === 'activity' ? 'active' : ''} onClick={() => { setActiveTab('activity'); loadActivityLogs(); }}><Activity size={16}/> Activity <span>{activityLogs.length}</span></button><button className={activeTab === 'delivery' ? 'active' : ''} onClick={() => { setActiveTab('delivery'); loadDeliveryZones(); }}><Truck size={16}/> Delivery zones <span>{deliveryZones.length}</span></button><button className={activeTab === 'sellers' ? 'active' : ''} onClick={() => { setActiveTab('sellers'); loadSellerApplications(); }}><Store size={16}/> Sellers <span>{sellerApplications.filter(item=>item.status==='pending').length}</span></button></nav>
       {message && <div className="admin-message">{message}<button onClick={()=>setMessage('')}><X size={14}/></button></div>}
       {activeTab === 'sales' && <section className="admin-panel" style={{marginBottom:16}}>
         <div className="admin-panel-heading"><div><span className="admin-panel-icon"><ShieldCheck size={17}/></span><strong>Store launch readiness</strong></div><small>Live configuration checks</small></div>
@@ -632,7 +660,33 @@ export default function Admin() {
           <button className="admin-primary" onClick={()=>{setActiveTab('delivery');loadDeliveryZones();}}>Configure delivery</button>
         </div>
       </section>}
-      {activeTab === 'delivery' ? <section className="admin-panel">
+      {activeTab === 'sellers' ? <section className="admin-panel">
+        <div className="admin-panel-heading"><div><span className="admin-panel-icon"><Users size={17}/></span><strong>Local shop applications</strong></div><small>{sellerApplications.filter(item=>item.status==='pending').length} awaiting review</small></div>
+        <p className="admin-shipping-help">Shop details verify karein. Approval ke baad seller access agle development phase mein enable hoga; is approval se abhi product upload access nahi milta.</p>
+        {busy && <p className="admin-shipping-help">Applications load ho rahi hain…</p>}
+        {!busy && sellerApplications.length===0 && <p className="admin-shipping-help">Abhi koi seller application nahi aayi.</p>}
+        <div className="admin-delivery-zone-list">{sellerApplications.map(application=><article className="admin-delivery-zone" key={application.id}>
+          <div className="admin-delivery-zone-title"><strong>{application.shop_name}</strong><span className="admin-seller-status">{application.status}</span></div>
+          <div className="admin-status-grid">
+            <div><span>Contact person</span><strong>{application.contact_name}</strong></div>
+            <div><span>Phone</span><strong>{application.phone}</strong></div>
+            <div><span>Category</span><strong>{application.category}</strong></div>
+            <div><span>Location</span><strong>{application.city}, {application.district}</strong></div>
+            <div><span>Pickup PIN</span><strong>{application.postal_code}</strong></div>
+            <div><span>Applied</span><strong>{new Date(application.created_at).toLocaleDateString('en-IN')}</strong></div>
+          </div>
+          <p className="admin-shipping-help"><strong>Pickup address:</strong> {application.pickup_address}</p>
+          {application.notes && <p className="admin-shipping-help"><strong>Shop details:</strong> {application.notes}</p>}
+          {application.admin_note && <p className="admin-shipping-help"><strong>Previous admin note:</strong> {application.admin_note}</p>}
+          {application.status==='pending' ? <>
+            <label className="admin-delivery-pin-list">Review note (optional)<textarea rows={2} maxLength={1000} value={sellerReviewNotes[application.id] || ''} onChange={e=>setSellerReviewNotes(current=>({...current,[application.id]:e.target.value}))} placeholder="Verification note or reason for rejection"/></label>
+            <div className="admin-seller-actions">
+              <button className="admin-primary" disabled={orderBusy===application.id} onClick={()=>reviewSellerApplication(application,'approved')}>{orderBusy===application.id?'Saving…':'Approve seller'}</button>
+              <button className="admin-secondary" disabled={orderBusy===application.id} onClick={()=>reviewSellerApplication(application,'rejected')}>Reject application</button>
+            </div>
+          </> : <p className="admin-shipping-help">Reviewed: {application.status}</p>}
+        </article>)}</div>
+      </section> : activeTab === 'delivery' ? <section className="admin-panel">
         <div className="admin-panel-heading"><div><span className="admin-panel-icon"><Truck size={17}/></span><strong>Jammu & Kashmir delivery zones</strong></div><small>{deliveryZones.filter(z=>z.is_serviceable).length} serviceable districts</small></div>
         <p className="admin-shipping-help">Har district ke liye delivery availability, fee, free-delivery threshold aur estimated delivery days configure karein. Changes checkout par server-side apply honge.</p>
         <div className="admin-delivery-zone-list">{deliveryZones.map(zone=><article className="admin-delivery-zone" key={zone.id}>
