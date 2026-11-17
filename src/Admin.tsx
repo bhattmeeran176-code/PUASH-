@@ -2,6 +2,7 @@ import { quoteCsvCell } from './utils/csv.js';
 import { parsePostalCodes } from './utils/postal-codes.js';
 import { validateProductNumbers } from './utils/product-validation.js';
 import { validateProductPublishing } from './utils/product-publishing.js';
+import { isGalleryWithinLimit } from './utils/gallery-validation.js';
 import { FormEvent, useEffect, useState } from 'react';
 import { supabase } from './supabase';
 import { ArrowLeft, BarChart3, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X, AlertTriangle, TrendingUp, Users, UserRound, ChevronDown, ChevronUp, Download, Activity, Truck } from 'lucide-react';
@@ -435,6 +436,13 @@ export default function Admin() {
     if (numericError === 'stock') { setMessage('Stock quantity 0 se 10,00,000 ke beech whole number honi chahiye.'); return; }
     if (imageFile && (!['image/jpeg', 'image/png', 'image/webp'].includes(imageFile.type) || imageFile.size > 5 * 1024 * 1024)) { setMessage('Image JPG, PNG ya WebP ho aur 5 MB se chhoti ho.'); return; }
     if (galleryFiles.length > 8 || galleryFiles.some(file => !['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024)) { setMessage('Gallery mein maximum 8 images add karein. Har image JPG, PNG ya WebP aur 5 MB se chhoti honi chahiye.'); return; }
+    let existingGallery: { id: string; sort_order: number }[] = [];
+    if (editing && galleryFiles.length) {
+      const { data, error } = await supabase.from('product_images').select('id,sort_order').eq('product_id', editing);
+      if (error) { setMessage('Existing product gallery load nahi hui: ' + error.message); return; }
+      existingGallery = data || [];
+    }
+    if (!isGalleryWithinLimit(existingGallery.length, galleryFiles.length)) { setMessage('Ek product ke liye maximum 8 gallery images allowed hain.'); return; }
     setBusy(true); setMessage('');
     let finalImage = imageUrl.trim() || null;
     let uploadedImagePath: string | null = null;
@@ -464,10 +472,7 @@ export default function Admin() {
     }
     const savedProductId = editing || result.data?.id;
     if (savedProductId && galleryFiles.length) {
-      const { data: existingGallery, error: existingGalleryError } = await supabase.from('product_images').select('id,sort_order').eq('product_id', savedProductId);
-      if (existingGalleryError) { setBusy(false); setMessage('Existing product gallery load nahi hui: ' + existingGalleryError.message); await loadData(); return; }
-      if ((existingGallery?.length || 0) + galleryFiles.length > 8) { setBusy(false); setMessage('Ek product ke liye maximum 8 additional gallery images allowed hain.'); return; }
-      const nextSortOrder = Math.max(0, ...(existingGallery || []).map((item: any) => Number(item.sort_order) || 0)) + 1;
+      const nextSortOrder = Math.max(0, ...existingGallery.map(item => Number(item.sort_order) || 0)) + 1;
       const galleryRows: { product_id: string; image_url: string; storage_path: string; alt_text: string; sort_order: number }[] = [];
       const uploadedGalleryPaths: string[] = [];
       for (let index = 0; index < galleryFiles.length; index++) {
