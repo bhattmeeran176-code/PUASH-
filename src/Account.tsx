@@ -52,6 +52,10 @@ export default function Account() {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneOtp, setPhoneOtp] = useState('');
+  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
   const [fullName, setFullName] = useState('');
   const [savedName, setSavedName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -247,6 +251,46 @@ export default function Account() {
     }
   };
 
+  const requestPhoneOtp = async () => {
+    const rawPhone = phoneNumber.trim();
+    const digits = rawPhone.replace(/\\D/g, '');
+    const normalizedPhone = rawPhone.startsWith('+') ? '+' + digits : digits.length === 10 ? '+91' + digits : '';
+    if (!/^\\+[1-9]\\d{7,14}$/.test(normalizedPhone)) {
+      setError('Valid phone number enter karein, country code ke saath. India ke liye 10-digit number bhi chalega.');
+      return;
+    }
+    setBusy(true); setError(''); setMessage('');
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      phone: normalizedPhone,
+      options: { shouldCreateUser: true },
+    });
+    setBusy(false);
+    if (otpError) setError('OTP send nahi hua: ' + otpError.message);
+    else {
+      setPhoneNumber(normalizedPhone);
+      setPhoneOtp('');
+      setPhoneOtpSent(true);
+      setMessage('OTP SMS ke through bhej diya gaya hai. Apna 6-digit code enter karein.');
+    }
+  };
+
+  const verifyPhoneOtp = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!/^\\d{6}$/.test(phoneOtp.trim())) {
+      setError('6-digit OTP enter karein.');
+      return;
+    }
+    setBusy(true); setError(''); setMessage('');
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      phone: phoneNumber,
+      token: phoneOtp.trim(),
+      type: 'sms',
+    });
+    setBusy(false);
+    if (verifyError) setError('OTP verify nahi hua: ' + verifyError.message);
+    else setMessage('Phone number verify ho gaya. PUASH mein welcome!');
+  };
+
   const authenticate = async (event: FormEvent) => {
     event.preventDefault(); setBusy(true); setError(''); setMessage('');
     const result = mode === 'login'
@@ -340,15 +384,30 @@ export default function Account() {
       {!user ? <>
         <h1>{mode === 'login' ? 'Welcome back.' : 'Create your account.'}</h1>
         <p>{mode === 'login' ? 'Sign in karke apna PUASH shopping account access karein.' : 'PUASH par apna customer account banayein.'}</p>
-        <form className="account-form" onSubmit={authenticate}>
-          {mode === 'signup' && <label>Full name<input value={fullName} onChange={e=>setFullName(e.target.value)} autoComplete="name" required placeholder="Your name"/></label>}
-          <label>Email address<input type="email" value={email} onChange={e=>setEmail(e.target.value)} autoComplete="email" required placeholder="you@example.com"/></label>
-          <label>Password<input type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={8} required placeholder="At least 8 characters"/></label>
-          <button className="account-primary" disabled={busy}>{busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}</button>
-        </form>
-        <button className="account-switch" onClick={()=>{setMode(mode === 'login' ? 'signup' : 'login');setMessage('');setError('')}}>
-          {mode === 'login' ? 'New to PUASH? Create an account' : 'Already have an account? Sign in'}
-        </button>
+        {authMethod === 'email' ? <>
+          <form className="account-form" onSubmit={authenticate}>
+            {mode === 'signup' && <label>Full name<input value={fullName} onChange={e=>setFullName(e.target.value)} autoComplete="name" required placeholder="Your name"/></label>}
+            <label>Email address<input type="email" value={email} onChange={e=>setEmail(e.target.value)} autoComplete="email" required placeholder="you@example.com"/></label>
+            <label>Password<input type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={8} required placeholder="At least 8 characters"/></label>
+            <button className="account-primary" disabled={busy}>{busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}</button>
+          </form>
+          <button type="button" className="account-switch" onClick={()=>{setAuthMethod('phone');setPhoneOtpSent(false);setError('');setMessage('')}}>Continue with mobile number (OTP)</button>
+          <button type="button" className="account-switch" onClick={()=>{setMode(mode === 'login' ? 'signup' : 'login');setMessage('');setError('')}}>
+            {mode === 'login' ? 'New to PUASH? Create an account' : 'Already have an account? Sign in'}
+          </button>
+        </> : <>
+          {!phoneOtpSent ? <form className="account-form" onSubmit={event=>{event.preventDefault();void requestPhoneOtp()}}>
+            <label>Mobile number<input type="tel" inputMode="tel" autoComplete="tel" value={phoneNumber} onChange={e=>setPhoneNumber(e.target.value)} required placeholder="+91 98765 43210"/></label>
+            <p className="account-auth-note">We'll send a one-time 6-digit code by SMS. Enter your country code for numbers outside India.</p>
+            <button className="account-primary" disabled={busy}>{busy ? 'Sending OTP…' : 'Send OTP'}</button>
+          </form> : <form className="account-form" onSubmit={verifyPhoneOtp}>
+            <label>6-digit OTP<input type="text" inputMode="numeric" autoComplete="one-time-code" value={phoneOtp} onChange={e=>setPhoneOtp(e.target.value.replace(/\\D/g,'').slice(0,6))} required maxLength={6} pattern="[0-9]{6}" placeholder="Enter OTP"/></label>
+            <p className="account-auth-note">Code sent to {phoneNumber}. OTP delivery depends on PUASH's configured SMS provider.</p>
+            <button className="account-primary" disabled={busy}>{busy ? 'Verifying…' : 'Verify and sign in'}</button>
+            <button type="button" className="account-switch" disabled={busy} onClick={()=>void requestPhoneOtp()}>Resend OTP</button>
+          </form>}
+          <button type="button" className="account-switch" onClick={()=>{setAuthMethod('email');setPhoneOtpSent(false);setPhoneOtp('');setError('');setMessage('')}}>Use email and password instead</button>
+        </>}
       </> : <>
         <h1>My account.</h1>
         <p>Apni profile aur delivery addresses yahan manage karein.</p>
