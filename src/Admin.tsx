@@ -1,6 +1,7 @@
 import { quoteCsvCell } from './utils/csv.js';
 import { parsePostalCodes } from './utils/postal-codes.js';
 import { validateProductNumbers } from './utils/product-validation.js';
+import { validateProductPublishing } from './utils/product-publishing.js';
 import { FormEvent, useEffect, useState } from 'react';
 import { supabase } from './supabase';
 import { ArrowLeft, BarChart3, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X, AlertTriangle, TrendingUp, Users, UserRound, ChevronDown, ChevronUp, Download, Activity, Truck } from 'lucide-react';
@@ -424,6 +425,10 @@ export default function Admin() {
   const saveProduct = async (event: FormEvent) => {
     event.preventDefault();
     if (!name.trim()) { setMessage('Product name required hai.'); return; }
+    const publishingError = validateProductPublishing({ active, categoryId, description, imageSelected: Boolean(imageFile || imageUrl.trim()) });
+    if (publishingError === 'category') { setMessage('Live product ke liye category select karein.'); return; }
+    if (publishingError === 'description') { setMessage('Live product ke liye product description add karein.'); return; }
+    if (publishingError === 'image') { setMessage('Live product ke liye main product image add karein.'); return; }
     const numericError = validateProductNumbers(price, comparePrice, stock);
     if (numericError === 'price') { setMessage('Product price zero se zyada valid number honi chahiye.'); return; }
     if (numericError === 'compare') { setMessage('MRP compare price, selling price se zyada ya barabar hona chahiye.'); return; }
