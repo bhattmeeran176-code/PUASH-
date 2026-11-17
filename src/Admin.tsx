@@ -1,5 +1,6 @@
 import { quoteCsvCell } from './utils/csv.js';
 import { parsePostalCodes } from './utils/postal-codes.js';
+import { validateProductNumbers } from './utils/product-validation.js';
 import { FormEvent, useEffect, useState } from 'react';
 import { supabase } from './supabase';
 import { ArrowLeft, BarChart3, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X, AlertTriangle, TrendingUp, Users, UserRound, ChevronDown, ChevronUp, Download, Activity, Truck } from 'lucide-react';
@@ -422,9 +423,11 @@ export default function Admin() {
 
   const saveProduct = async (event: FormEvent) => {
     event.preventDefault();
-    if (!name.trim() || !price || !Number.isFinite(Number(price)) || Number(price) <= 0) { setMessage('Product name aur valid price required hain.'); return; }
-    if (comparePrice && (!Number.isFinite(Number(comparePrice)) || Number(comparePrice) < Number(price))) { setMessage('MRP compare price, selling price se zyada ya barabar hona chahiye.'); return; }
-    if (!Number.isInteger(Number(stock)) || Number(stock) < 0 || Number(stock) > 1000000) { setMessage('Stock quantity 0 se 10,00,000 ke beech whole number honi chahiye.'); return; }
+    if (!name.trim()) { setMessage('Product name required hai.'); return; }
+    const numericError = validateProductNumbers(price, comparePrice, stock);
+    if (numericError === 'price') { setMessage('Product price zero se zyada valid number honi chahiye.'); return; }
+    if (numericError === 'compare') { setMessage('MRP compare price, selling price se zyada ya barabar hona chahiye.'); return; }
+    if (numericError === 'stock') { setMessage('Stock quantity 0 se 10,00,000 ke beech whole number honi chahiye.'); return; }
     if (imageFile && (!['image/jpeg', 'image/png', 'image/webp'].includes(imageFile.type) || imageFile.size > 5 * 1024 * 1024)) { setMessage('Image JPG, PNG ya WebP ho aur 5 MB se chhoti ho.'); return; }
     if (galleryFiles.length > 8 || galleryFiles.some(file => !['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024)) { setMessage('Gallery mein maximum 8 images add karein. Har image JPG, PNG ya WebP aur 5 MB se chhoti honi chahiye.'); return; }
     setBusy(true); setMessage('');
