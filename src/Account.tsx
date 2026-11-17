@@ -29,6 +29,7 @@ type Address = {
   line1: string;
   line2: string | null;
   city: string;
+  district: string;
   state: string;
   postal_code: string;
   country: string;
@@ -37,7 +38,7 @@ type Address = {
 
 const blankAddress = {
   label: 'Home', full_name: '', phone: '', line1: '', line2: '',
-  city: '', state: 'Jammu and Kashmir', postal_code: '', country: 'India',
+  city: '', district: 'Srinagar', state: 'Jammu and Kashmir', postal_code: '', country: 'India',
   is_default: false,
 };
 
@@ -277,7 +278,7 @@ export default function Account() {
   const editAddress = (address: Address) => {
     setAddressForm({
       label: address.label, full_name: address.full_name, phone: address.phone,
-      line1: address.line1, line2: address.line2 || '', city: address.city,
+      line1: address.line1, line2: address.line2 || '', city: address.city, district: address.district || 'Srinagar',
       state: address.state, postal_code: address.postal_code, country: address.country,
       is_default: address.is_default,
     });
@@ -355,7 +356,7 @@ export default function Account() {
           {addresses.map(address=><article className="saved-address" key={address.id}>
             <div className="saved-address-top"><div><strong>{address.label}</strong>{address.is_default && <span>Default</span>}</div><div className="saved-address-actions"><button type="button" onClick={()=>editAddress(address)}>Edit</button><button type="button" disabled={addressBusy} onClick={()=>deleteAddress(address.id)} aria-label="Delete address"><Trash2 size={14}/></button></div></div>
             <strong>{address.full_name} · {address.phone}</strong>
-            <p>{[address.line1,address.line2,address.city,address.state,address.postal_code,address.country].filter(Boolean).join(', ')}</p>
+            <p>{[address.line1,address.line2,address.city,address.district,address.state,address.postal_code,address.country].filter(Boolean).join(', ')}</p>
             {!address.is_default && <button type="button" className="address-default" disabled={addressBusy} onClick={()=>makeDefault(address.id)}>Set as default</button>}
           </article>)}
           {showAddressForm && <form className="account-form address-form" onSubmit={saveAddress}>
@@ -366,6 +367,7 @@ export default function Account() {
             <label>Address line 1<input required minLength={5} maxLength={240} value={addressForm.line1} onChange={e=>setAddressForm({...addressForm,line1:e.target.value})} placeholder="House, street, locality"/></label>
             <label>Address line 2 (optional)<input maxLength={240} value={addressForm.line2} onChange={e=>setAddressForm({...addressForm,line2:e.target.value})} placeholder="Landmark, area"/></label>
             <label>City / Town<input required minLength={2} maxLength={100} value={addressForm.city} onChange={e=>setAddressForm({...addressForm,city:e.target.value})} placeholder="Srinagar"/></label>
+            <label>District<select required value={addressForm.district} onChange={e=>setAddressForm({...addressForm,district:e.target.value})}>{<option>Anantnag</option><option>Bandipora</option><option>Baramulla</option><option>Budgam</option><option>Doda</option><option>Ganderbal</option><option>Jammu</option><option>Kathua</option><option>Kishtwar</option><option>Kulgam</option><option>Kupwara</option><option>Poonch</option><option>Pulwama</option><option>Rajouri</option><option>Ramban</option><option>Reasi</option><option>Samba</option><option>Shopian</option><option>Srinagar</option><option>Udhampur</option>}</select></label>
             <label>State<input required minLength={2} maxLength={100} value={addressForm.state} onChange={e=>setAddressForm({...addressForm,state:e.target.value})}/></label>
             <label>PIN code<input required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={addressForm.postal_code} onChange={e=>setAddressForm({...addressForm,postal_code:e.target.value.replace(/\D/g,'').slice(0,6)})} placeholder="190001"/></label>
             <label className="address-default-check"><input type="checkbox" checked={addressForm.is_default} onChange={e=>setAddressForm({...addressForm,is_default:e.target.checked})}/> Set as my default address</label>
