@@ -2956,3 +2956,5 @@ button,input,select { font-family:'Manrope',sans-serif; }
 @media(prefers-reduced-motion:reduce) {
   .detail-gallery > img,.detail-gallery-thumbs button { transition:none; }
 }
+
+.admin-seller-status{display:inline-flex;padding:6px 10px;border-radius:20px;background:#f2eee5;color:#685b49;font-size:10px;font-weight:800;text-transform:capitalize}.admin-seller-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}.admin-secondary{border:1px solid #d9cfc1;background:#fffefa;color:#765447;border-radius:7px;padding:11px 15px;font-size:12px;font-weight:800;cursor:pointer}.admin-secondary:disabled{opacity:.55;cursor:wait}@media(max-width:600px){.admin-seller-actions>*{flex:1;min-height:44px}}
