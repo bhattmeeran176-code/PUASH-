@@ -2811,3 +2811,65 @@ button,input,select { font-family:'Manrope',sans-serif; }
 @media(prefers-reduced-motion:reduce) {
  .market-categories .home-category-emoji { transition:none; }
 }
+
+
+/* PUASH home refinement: calmer hierarchy, restrained controls, premium product tiles */
+.market-promo { max-width:1180px; }
+.market-promo-track { padding:2px 2px 8px; }
+.market-promo-card { box-shadow:0 16px 34px rgba(24,55,40,.10); }
+.market-promo-image { background:rgba(250,247,239,.13); }
+.market-promo-image img { object-fit:contain; padding:8px; }
+.market-section-heading h2 { font-family:'Playfair Display',serif; font-weight:700; letter-spacing:-.02em; }
+.market-categories .home-category-card { transition:transform .2s ease; }
+.market-categories .home-category-emoji { display:grid; place-items:center; border:1px solid #e4eadf; background:linear-gradient(145deg,#f7f7f0,#e9efe6); color:#315b48; box-shadow:0 5px 14px rgba(30,60,43,.06); }
+.market-categories .home-category-card:active { transform:scale(.97); }
+.products-section { max-width:1180px; margin-inline:auto; }
+.products-section .section-heading { align-items:flex-end; gap:18px; margin-bottom:14px; }
+.products-section .section-heading h2 { font-family:'Playfair Display',serif; font-size:clamp(22px,3vw,29px); letter-spacing:-.025em; }
+.products-section .section-heading p { margin-top:5px; color:#85877e; font-size:12px; }
+.products-section .sort-control { display:flex; align-items:center; gap:7px; padding:9px 12px; border:1px solid #e4e8df; border-radius:9px; background:#fffdf8; color:#526052; font-size:11px; }
+.products-section .sort-control select { max-width:132px; border:0; outline:0; background:transparent; color:#284a38; font:inherit; font-weight:700; }
+.market-filter-chips { padding:3px 0 13px; }
+.market-filter-chips .chip { min-height:35px; padding:0 16px; border-color:#e6e8df; background:#fffefa; font-weight:650; }
+.market-filter-chips .chip.selected { box-shadow:0 4px 10px rgba(49,91,72,.15); }
+.market-filter-row { display:flex; align-items:center; justify-content:space-between; margin:0 0 13px; }
+.market-filter-toggle { display:inline-flex; align-items:center; gap:8px; min-height:35px; padding:0 12px; border:1px solid #e4e8df; border-radius:9px; background:#fffefa; color:#315b48; font-size:11px; font-weight:750; }
+.market-filter-toggle > svg:last-child { transition:transform .2s ease; }
+.market-filter-toggle.is-open > svg:last-child { transform:rotate(90deg); }
+.market-results-note { color:#92958b; font-size:10px; }
+.products-section .advanced-filter-panel { margin:0 0 16px; border-color:#e8e9df; border-radius:12px; background:#fafaf5; box-shadow:none; }
+.product-grid { gap:16px; }
+.product-card { overflow:hidden; border:1px solid #e9ece4; border-radius:14px; background:#fffefa; box-shadow:0 4px 15px rgba(31,54,39,.045); transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease; }
+.product-card:hover { transform:translateY(-4px); border-color:#d5e0d4; box-shadow:0 15px 32px rgba(31,54,39,.10); }
+.product-visual { min-height:225px; background:#f4f5ee; }
+.product-photo { object-fit:contain !important; padding:12px; mix-blend-mode:multiply; }
+.product-visual::before { display:none; }
+.product-info { padding:14px 15px 15px; }
+.product-category { color:#8a9284; font-size:9px; font-weight:750; letter-spacing:.1em; text-transform:uppercase; }
+.product-name { display:-webkit-box; min-height:38px; overflow:hidden; -webkit-box-orient:vertical; -webkit-line-clamp:2; color:#2b342c; font-size:12px; font-weight:700; line-height:1.55; }
+.rating-line { margin:7px 0 9px; }
+.price-row { align-items:baseline; flex-wrap:wrap; gap:6px; }
+.price-row strong { color:#234735; font-size:16px; }
+.price-row del { color:#9a9d93; font-size:10px; }
+.price-row span { color:#71845e; font-size:9px; font-weight:750; }
+.add-button { width:100%; min-height:38px; margin-top:12px; border:1px solid #d9e5d8; border-radius:8px; background:#edf3eb; color:#28513d; font-size:11px; font-weight:750; }
+.add-button:hover { background:#dfeadd; }
+.wishlist-heart { top:10px; right:10px; width:33px; height:33px; border:1px solid rgba(223,228,218,.9); background:rgba(255,254,250,.94); box-shadow:0 3px 10px rgba(32,50,36,.07); }
+@media(max-width:760px) {
+ .products-section { margin:18px 15px 0; }
+ .products-section .section-heading { margin-bottom:11px; }
+ .products-section .section-heading h2 { font-size:22px; }
+ .products-section .sort-control { gap:5px; padding:7px 9px; }
+ .products-section .sort-control select { max-width:100px; font-size:10px; }
+ .market-filter-chips { margin-right:-15px; padding-right:15px; }
+ .market-filter-row { margin-bottom:10px; }
+ .product-grid { gap:10px; }
+ .product-card { border-radius:12px; }
+ .product-visual { min-height:158px; }
+ .product-photo { padding:8px; }
+ .product-info { padding:10px 10px 12px; }
+ .product-name { min-height:35px; font-size:11px; }
+ .rating-line { margin:5px 0 7px; }
+ .price-row strong { font-size:14px; }
+ .add-button { min-height:35px; margin-top:9px; font-size:10px; }
+}
