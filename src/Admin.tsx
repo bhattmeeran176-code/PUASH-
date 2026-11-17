@@ -408,17 +408,29 @@ export default function Admin() {
     }
     const savedProductId = editing || result.data?.id;
     if (savedProductId && galleryFiles.length) {
+      const { data: existingGallery, error: existingGalleryError } = await supabase.from('product_images').select('id,sort_order').eq('product_id', savedProductId);
+      if (existingGalleryError) { setBusy(false); setMessage('Existing product gallery load nahi hui: ' + existingGalleryError.message); await loadData(); return; }
+      if ((existingGallery?.length || 0) + galleryFiles.length > 8) { setBusy(false); setMessage('Ek product ke liye maximum 8 additional gallery images allowed hain.'); return; }
+      const nextSortOrder = Math.max(0, ...(existingGallery || []).map((item: any) => Number(item.sort_order) || 0)) + 1;
       const galleryRows: { product_id: string; image_url: string; storage_path: string; alt_text: string; sort_order: number }[] = [];
+      const uploadedGalleryPaths: string[] = [];
       for (let index = 0; index < galleryFiles.length; index++) {
         const file = galleryFiles[index];
         const safeName = file.name.toLowerCase().replace(/[^a-z0-9.-]+/g, '-');
         const path = 'gallery/' + savedProductId + '/' + Date.now() + '-' + crypto.randomUUID().slice(0, 8) + '-' + safeName;
         const { error: uploadError } = await supabase.storage.from('product-images').upload(path, file, { upsert: false, contentType: file.type });
-        if (uploadError) { setBusy(false); setMessage('Product save ho gaya, lekin gallery upload ruk gaya: ' + uploadError.message); await loadData(); return; }
-        galleryRows.push({ product_id: savedProductId, image_url: supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl, storage_path: path, alt_text: name.trim(), sort_order: index + 1 });
+        if (uploadError) {
+          if (uploadedGalleryPaths.length) await supabase.storage.from('product-images').remove(uploadedGalleryPaths);
+          setBusy(false); setMessage('Product save ho gaya, lekin gallery upload ruk gaya: ' + uploadError.message); await loadData(); return;
+        }
+        uploadedGalleryPaths.push(path);
+        galleryRows.push({ product_id: savedProductId, image_url: supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl, storage_path: path, alt_text: name.trim(), sort_order: nextSortOrder + index });
       }
       const { error: galleryError } = await supabase.from('product_images').insert(galleryRows);
-      if (galleryError) { setBusy(false); setMessage('Product save ho gaya, lekin gallery record save nahi hua: ' + galleryError.message); await loadData(); return; }
+      if (galleryError) {
+        await supabase.storage.from('product-images').remove(uploadedGalleryPaths);
+        setBusy(false); setMessage('Product save ho gaya, lekin gallery record save nahi hua: ' + galleryError.message); await loadData(); return;
+      }
     }
     setBusy(false);
     setMessage(editing ? 'Product update ho gaya.' : 'Product add ho gaya.');
