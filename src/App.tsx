@@ -88,6 +88,7 @@ function App() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [orderId, setOrderId] = useState('');
   const [checkoutAddresses, setCheckoutAddresses] = useState<any[]>([]);
+  const [deliveryZones, setDeliveryZones] = useState<any[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState('');
   const [checkoutError, setCheckoutError] = useState('');
   const [placingOrder, setPlacingOrder] = useState(false);
@@ -145,6 +146,7 @@ function App() {
 
   useEffect(() => {
     let cancelled = false;
+    supabase.from('delivery_zones').select('district,delivery_fee,free_delivery_threshold,min_delivery_days,max_delivery_days,is_serviceable').eq('is_serviceable', true).order('district').then(({data,error}) => { if (!cancelled && !error) setDeliveryZones(data || []); });
     async function loadStoreData() {
       const [productResult, categoryResult, reviewResult, variantResult] = await Promise.all([
         supabase
@@ -259,7 +261,9 @@ function App() {
   });
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cartItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-  const delivery = subtotal === 0 || subtotal >= 999 ? 0 : 49;
+  const activeCheckoutAddress = checkoutAddresses.find(address => address.id === selectedAddressId);
+  const selectedDeliveryZone = deliveryZones.find(zone => zone.district.toLowerCase() === String(activeCheckoutAddress?.district || '').toLowerCase());
+  const delivery = subtotal === 0 ? 0 : selectedDeliveryZone ? (subtotal >= Number(selectedDeliveryZone.free_delivery_threshold) ? 0 : Number(selectedDeliveryZone.delivery_fee)) : 0;
   const total = Math.max(0, subtotal + delivery - (appliedCoupon?.discount_amount || 0));
 
   const addToCart = (product: Product) => {
@@ -315,7 +319,7 @@ function App() {
     }
     const { data, error } = await supabase
       .from('customer_addresses')
-      .select('id,label,full_name,phone,line1,line2,city,state,postal_code,country,is_default')
+      .select('id,label,full_name,phone,line1,line2,city,district,state,postal_code,country,is_default')
       .eq('user_id', authData.user.id)
       .order('is_default', { ascending: false })
       .order('created_at', { ascending: false });
@@ -973,6 +977,7 @@ function App() {
             <div className="eyebrow">SECURE CHECKOUT</div>
             <h2>Confirm your order.</h2>
             <p>Choose your saved delivery address. Payment method: Cash on Delivery.</p>
+            {activeCheckoutAddress && <div className="checkout-delivery-status"><strong>{selectedDeliveryZone ? 'Delivery available · ' + selectedDeliveryZone.district : 'Delivery not available for this district'}</strong>{selectedDeliveryZone && <small>Estimated delivery: {selectedDeliveryZone.min_delivery_days}–{selectedDeliveryZone.max_delivery_days} days · {delivery === 0 ? 'Free delivery' : money(delivery) + ' delivery fee'}</small>}</div>}
             {checkoutAddresses.length > 0 && <div className="checkout-address-list">
               <strong>Deliver to</strong>
               {checkoutAddresses.map((address: any) => <label className="checkout-address-option" key={address.id}>
@@ -995,7 +1000,7 @@ function App() {
             <button
               className="primary-button full-button"
               onClick={placeOrder}
-              disabled={placingOrder || !selectedAddressId}
+              disabled={placingOrder || !selectedAddressId || !selectedDeliveryZone}
             >
               {placingOrder ? 'Placing order…' : 'Place Cash on Delivery order'} <Check size={17} />
             </button>

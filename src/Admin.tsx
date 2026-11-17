@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { supabase } from './supabase';
-import { ArrowLeft, BarChart3, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X, AlertTriangle, TrendingUp, Users, UserRound, ChevronDown, ChevronUp, Download, Activity } from 'lucide-react';
+import { ArrowLeft, BarChart3, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X, AlertTriangle, TrendingUp, Users, UserRound, ChevronDown, ChevronUp, Download, Activity, Truck } from 'lucide-react';
 
 type Category = { id: string; name: string };
 type OrderItem = { id: string; product_id?: string | null; product_name: string; unit_price: number; quantity: number };
@@ -10,6 +10,7 @@ type ActivityLog = { id:string; actor_id:string|null; actor_name:string; action:
 type StockMovement = { id:string; product_id:string|null; product_name:string; previous_stock:number; new_stock:number; change_quantity:number; movement_type:string; actor_id:string|null; created_at:string };
 type Coupon = { id:string; code:string; discount_type:'percentage'|'fixed'; discount_value:number; min_order_amount:number; max_discount:number|null; starts_at:string|null; expires_at:string|null; usage_limit:number|null; per_user_limit:number; usage_count:number; is_active:boolean };
 type ReturnRequest = { id: string; order_id: string; user_id: string; reason: string; details: string | null; status: string; admin_note: string | null; requested_at: string; orders?: { total_amount: number; shipping_address: any } | null };
+type DeliveryZone = { id:string; district:string; is_serviceable:boolean; delivery_fee:number; free_delivery_threshold:number; min_delivery_days:number; max_delivery_days:number; };
 type ProductVariant = { id:string; product_id:string; label:string; price:number|null; stock_quantity:number; is_active:boolean; };
 type Product = {
   id: string; name: string; slug: string; description: string | null;
@@ -32,6 +33,7 @@ export default function Admin() {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
+  const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>([]);
   const [managedVariantProduct, setManagedVariantProduct] = useState<string | null>(null);
   const [managedVariants, setManagedVariants] = useState<ProductVariant[]>([]);
   const [variantLabel, setVariantLabel] = useState('');
@@ -63,7 +65,7 @@ export default function Admin() {
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [customerLoading, setCustomerLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'sales' | 'analytics' | 'products' | 'orders' | 'customers' | 'returns' | 'coupons' | 'inventory' | 'activity'>('sales');
+  const [activeTab, setActiveTab] = useState<'sales' | 'analytics' | 'products' | 'orders' | 'customers' | 'returns' | 'coupons' | 'inventory' | 'activity' | 'delivery'>('sales');
   const [analyticsRange, setAnalyticsRange] = useState<'7'|'30'|'90'|'365'>('30');
   const [orderBusy, setOrderBusy] = useState<string | null>(null);
   const [shippingDrafts, setShippingDrafts] = useState<Record<string, { courier: string; tracking: string }>>({});
@@ -107,6 +109,28 @@ export default function Admin() {
     setImagePreview(preview);
     return () => URL.revokeObjectURL(preview);
   }, [imageFile]);
+
+  const loadDeliveryZones = async () => {
+    const { data, error } = await supabase.from('delivery_zones').select('id,district,is_serviceable,delivery_fee,free_delivery_threshold,min_delivery_days,max_delivery_days').order('district');
+    if (error) setMessage('Delivery zones load nahi hue: ' + error.message);
+    else setDeliveryZones((data || []) as DeliveryZone[]);
+  };
+
+  const saveDeliveryZone = async (zone: DeliveryZone) => {
+    if (zone.delivery_fee < 0 || zone.free_delivery_threshold < 0 || zone.min_delivery_days < 0 || zone.max_delivery_days < zone.min_delivery_days) {
+      setMessage('Delivery fee, free threshold aur delivery days ki values check karein.'); return;
+    }
+    setOrderBusy(zone.id); setMessage('');
+    const { error } = await supabase.from('delivery_zones').update({
+      is_serviceable: zone.is_serviceable, delivery_fee: zone.delivery_fee,
+      free_delivery_threshold: zone.free_delivery_threshold,
+      min_delivery_days: zone.min_delivery_days, max_delivery_days: zone.max_delivery_days,
+      updated_at: new Date().toISOString(),
+    }).eq('id', zone.id);
+    setOrderBusy(null);
+    setMessage(error ? 'Delivery zone save nahi hua: ' + error.message : zone.district + ' delivery settings save ho gayi.');
+    if (!error) await loadDeliveryZones();
+  };
 
   const loadData = async () => {
     setBusy(true);
@@ -554,10 +578,23 @@ export default function Admin() {
   return <div className="admin-screen">
     <header className="admin-header"><a href="/" className="admin-brand"><span>PUASH.</span><small>ADMIN</small></a><button className="admin-logout" onClick={()=>supabase.auth.signOut()}><LogOut size={16}/> Sign out</button></header>
     <main className="admin-main">
-      <div className="admin-title-row"><div><div className="admin-kicker">STORE CONTROL</div><h1>{activeTab === 'sales' ? 'Sales dashboard' : activeTab === 'analytics' ? 'Advanced analytics' : activeTab === 'products' ? 'Products' : activeTab === 'inventory' ? 'Inventory management' : activeTab === 'activity' ? 'Admin activity logs' : activeTab === 'coupons' ? 'Coupons & discounts' : activeTab === 'returns' ? 'Returns' : activeTab === 'customers' ? 'Customers' : 'Orders'}</h1><p>{activeTab === 'sales' ? 'Your store performance at a glance.' : activeTab === 'analytics' ? 'Date-wise revenue, order trends and product performance.' : activeTab === 'products' ? 'Add, edit and publish products on your PUASH store.' : activeTab === 'inventory' ? 'Track stock levels and review every recorded stock movement.' : activeTab === 'activity' ? 'Review important changes made by store administrators.' : activeTab === 'coupons' ? 'Create and manage customer discount codes.' : activeTab === 'returns' ? 'Review and manage customer return requests.' : activeTab === 'customers' ? 'View customer accounts and order history.' : 'Review customer orders and update their fulfilment status.'}</p></div><button className="admin-refresh" onClick={() => { loadData(); loadOrders(); }}><RefreshCw size={16}/> Refresh</button></div>
-      <nav className="admin-tabs"><button className={activeTab === 'sales' ? 'active' : ''} onClick={() => setActiveTab('sales')}><BarChart3 size={16}/> Dashboard</button><button className={activeTab === 'analytics' ? 'active' : ''} onClick={() => setActiveTab('analytics')}><TrendingUp size={16}/> Analytics</button><button className={activeTab === 'products' ? 'active' : ''} onClick={() => setActiveTab('products')}><Package size={16}/> Products <span>{products.length}</span></button><button className={activeTab === 'orders' ? 'active' : ''} onClick={() => setActiveTab('orders')}><ClipboardList size={16}/> Orders <span>{genuineOrders.length}</span></button><button className={activeTab === 'customers' ? 'active' : ''} onClick={() => { setActiveTab('customers'); loadCustomers(); }}><Users size={16}/> Customers <span>{customers.length}</span></button><button className={activeTab === 'returns' ? 'active' : ''} onClick={() => { setActiveTab('returns'); loadReturnRequests(); }}><RefreshCw size={16}/> Returns <span>{returnRequests.filter(item=>item.status==='pending').length}</span></button><button className={activeTab === 'coupons' ? 'active' : ''} onClick={() => { setActiveTab('coupons'); loadCoupons(); }}><Save size={16}/> Coupons <span>{coupons.filter(c=>c.is_active).length}</span></button><button className={activeTab === 'inventory' ? 'active' : ''} onClick={() => { setActiveTab('inventory'); loadStockMovements(); }}><ClipboardList size={16}/> Inventory <span>{products.filter(p=>p.is_active && p.stock_quantity<=5).length}</span></button><button className={activeTab === 'activity' ? 'active' : ''} onClick={() => { setActiveTab('activity'); loadActivityLogs(); }}><Activity size={16}/> Activity <span>{activityLogs.length}</span></button></nav>
+      <div className="admin-title-row"><div><div className="admin-kicker">STORE CONTROL</div><h1>{activeTab === 'sales' ? 'Sales dashboard' : activeTab === 'analytics' ? 'Advanced analytics' : activeTab === 'products' ? 'Products' : activeTab === 'inventory' ? 'Inventory management' : activeTab === 'delivery' ? 'Delivery settings' : activeTab === 'activity' ? 'Admin activity logs' : activeTab === 'coupons' ? 'Coupons & discounts' : activeTab === 'returns' ? 'Returns' : activeTab === 'customers' ? 'Customers' : 'Orders'}</h1><p>{activeTab === 'sales' ? 'Your store performance at a glance.' : activeTab === 'analytics' ? 'Date-wise revenue, order trends and product performance.' : activeTab === 'products' ? 'Add, edit and publish products on your PUASH store.' : activeTab === 'inventory' ? 'Track stock levels and review every recorded stock movement.' : activeTab === 'delivery' ? 'Set district-wise serviceability, delivery charges and estimated delivery windows.' : activeTab === 'activity' ? 'Review important changes made by store administrators.' : activeTab === 'coupons' ? 'Create and manage customer discount codes.' : activeTab === 'returns' ? 'Review and manage customer return requests.' : activeTab === 'customers' ? 'View customer accounts and order history.' : 'Review customer orders and update their fulfilment status.'}</p></div><button className="admin-refresh" onClick={() => { loadData(); loadOrders(); }}><RefreshCw size={16}/> Refresh</button></div>
+      <nav className="admin-tabs"><button className={activeTab === 'sales' ? 'active' : ''} onClick={() => setActiveTab('sales')}><BarChart3 size={16}/> Dashboard</button><button className={activeTab === 'analytics' ? 'active' : ''} onClick={() => setActiveTab('analytics')}><TrendingUp size={16}/> Analytics</button><button className={activeTab === 'products' ? 'active' : ''} onClick={() => setActiveTab('products')}><Package size={16}/> Products <span>{products.length}</span></button><button className={activeTab === 'orders' ? 'active' : ''} onClick={() => setActiveTab('orders')}><ClipboardList size={16}/> Orders <span>{genuineOrders.length}</span></button><button className={activeTab === 'customers' ? 'active' : ''} onClick={() => { setActiveTab('customers'); loadCustomers(); }}><Users size={16}/> Customers <span>{customers.length}</span></button><button className={activeTab === 'returns' ? 'active' : ''} onClick={() => { setActiveTab('returns'); loadReturnRequests(); }}><RefreshCw size={16}/> Returns <span>{returnRequests.filter(item=>item.status==='pending').length}</span></button><button className={activeTab === 'coupons' ? 'active' : ''} onClick={() => { setActiveTab('coupons'); loadCoupons(); }}><Save size={16}/> Coupons <span>{coupons.filter(c=>c.is_active).length}</span></button><button className={activeTab === 'inventory' ? 'active' : ''} onClick={() => { setActiveTab('inventory'); loadStockMovements(); }}><ClipboardList size={16}/> Inventory <span>{products.filter(p=>p.is_active && p.stock_quantity<=5).length}</span></button><button className={activeTab === 'activity' ? 'active' : ''} onClick={() => { setActiveTab('activity'); loadActivityLogs(); }}><Activity size={16}/> Activity <span>{activityLogs.length}</span></button><button className={activeTab === 'delivery' ? 'active' : ''} onClick={() => { setActiveTab('delivery'); loadDeliveryZones(); }}><Truck size={16}/> Delivery zones <span>{deliveryZones.length}</span></button></nav>
       {message && <div className="admin-message">{message}<button onClick={()=>setMessage('')}><X size={14}/></button></div>}
-      {activeTab === 'sales' ? <section className="admin-sales-dashboard">
+      {activeTab === 'delivery' ? <section className="admin-panel">
+        <div className="admin-panel-heading"><div><span className="admin-panel-icon"><Truck size={17}/></span><strong>Jammu & Kashmir delivery zones</strong></div><small>{deliveryZones.filter(z=>z.is_serviceable).length} serviceable districts</small></div>
+        <p className="admin-shipping-help">Har district ke liye delivery availability, fee, free-delivery threshold aur estimated delivery days configure karein. Changes checkout par server-side apply honge.</p>
+        <div className="admin-delivery-zone-list">{deliveryZones.map(zone=><article className="admin-delivery-zone" key={zone.id}>
+          <div className="admin-delivery-zone-title"><strong>{zone.district}</strong><label><input type="checkbox" checked={zone.is_serviceable} onChange={e=>setDeliveryZones(items=>items.map(item=>item.id===zone.id?{...item,is_serviceable:e.target.checked}:item))}/> Deliver here</label></div>
+          <div className="admin-delivery-zone-fields">
+            <label>Delivery fee (₹)<input type="number" min="0" value={zone.delivery_fee} onChange={e=>setDeliveryZones(items=>items.map(item=>item.id===zone.id?{...item,delivery_fee:Number(e.target.value)}:item))}/></label>
+            <label>Free delivery above (₹)<input type="number" min="0" value={zone.free_delivery_threshold} onChange={e=>setDeliveryZones(items=>items.map(item=>item.id===zone.id?{...item,free_delivery_threshold:Number(e.target.value)}:item))}/></label>
+            <label>Min days<input type="number" min="0" value={zone.min_delivery_days} onChange={e=>setDeliveryZones(items=>items.map(item=>item.id===zone.id?{...item,min_delivery_days:Number(e.target.value)}:item))}/></label>
+            <label>Max days<input type="number" min="0" value={zone.max_delivery_days} onChange={e=>setDeliveryZones(items=>items.map(item=>item.id===zone.id?{...item,max_delivery_days:Number(e.target.value)}:item))}/></label>
+          </div>
+          <button className="admin-primary admin-zone-save" disabled={orderBusy===zone.id} onClick={()=>saveDeliveryZone(zone)}>{orderBusy===zone.id?'Saving…':'Save district settings'}</button>
+        </article>)}</div>
+      </section> : activeTab === 'sales' ? <section className="admin-sales-dashboard">
         <div className="admin-sales-note">Figures exclude internal test orders. Sales total below counts delivered orders only.</div>
         <div className="admin-sales-metrics">
           <article><span><ClipboardList size={17}/> Total orders</span><strong>{genuineOrders.length}</strong><small>Including cancelled orders</small></article>
