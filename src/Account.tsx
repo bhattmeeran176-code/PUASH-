@@ -409,7 +409,7 @@ export default function Account() {
             <button type="button" className="address-add" disabled={ordersBusy} onClick={async()=>{
               if (!user) return;
               setOrdersBusy(true);
-              const {data,error:loadError}=await supabase.from('orders').select('id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,created_at,courier_name,tracking_number,shipped_at,delivered_at,coupon_code,discount_amount,order_items(id,product_name,unit_price,quantity),order_return_requests(id,reason,details,status,admin_note,requested_at))').eq('user_id',user.id).order('created_at',{ascending:false}).limit(30);
+              const {data,error:loadError}=await supabase.from('orders').select('id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,created_at,courier_name,tracking_number,shipped_at,delivered_at,coupon_code,discount_amount,order_items(id,product_name,unit_price,quantity),order_return_requests(id,reason,details,status,admin_note,requested_at)').eq('user_id',user.id).order('created_at',{ascending:false}).limit(30);
               if(loadError) setError('Orders refresh nahi huye: '+loadError.message);
               else {
                 ordersRef.current = (data||[]) as CustomerOrder[]; setOrders(ordersRef.current);
@@ -428,7 +428,7 @@ export default function Account() {
               const current=steps.indexOf(order.status);
               return <article className="customer-order-card" key={order.id}>
                 <div className="customer-order-top"><div><strong>Order #{order.id.slice(0,8).toUpperCase()}</strong><small>{new Date(order.created_at).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'})}</small></div><span className={'customer-order-status status-'+order.status}>{labels[order.status]||order.status}</span></div>
-                {sellerFulfillments.filter(item=>item.order_id===order.id).length>0&&<section className="customer-seller-tracking"><strong><Package size={15}/> Seller-wise fulfilment</strong>{sellerFulfillments.filter(item=>item.order_id===order.id).map(item=><div className="customer-seller-tracking-row" key={item.order_id+'-'+item.shop_name}><div><b>{item.shop_name}</b><small>Seller item subtotal · ₹{Number(item.seller_subtotal).toLocaleString('en-IN')}</small></div><span className={'customer-order-status status-'+item.fulfillment_status}>{item.fulfillment_status.replaceAll('_',' ')}</span></div>)}</section>}
+                {sellerFulfillments.filter(item=>item.order_id===order.id).length>0&&<section className="customer-seller-tracking"><strong><Package size={15}/> Seller-wise fulfilment</strong>{sellerFulfillments.filter(item=>item.order_id===order.id).map(item=><div className="customer-seller-tracking-row" key={item.order_id+'-'+item.shop_name}><div><b>{item.shop_name}</b><small>Seller item subtotal · ₹{Number(item.seller_subtotal).toLocaleString('en-IN')}</small></div><span className={'customer-order-status status-'+item.fulfillment_status}>{item.fulfillment_status.replace(/_/g,' ')}</span></div>)}</section>}
                 <div className="customer-order-lines">{(order.order_items||[]).map(item=><div key={item.id}><span>{item.product_name} × {item.quantity}</span><b>₹{(Number(item.unit_price)*item.quantity).toLocaleString('en-IN')}</b></div>)}</div>
                 <div className="customer-order-total"><span>Total · {order.payment_method==='cash_on_delivery'?'Cash on Delivery':order.payment_method}</span><strong>₹{Number(order.total_amount).toLocaleString('en-IN')}</strong></div>
                 {order.status==='cancelled' ? <p className="customer-order-cancelled">This order was cancelled.</p> : <div className="customer-order-progress">{steps.map((step,index)=><div className={current>=index?'done':''} key={step}><span></span><small>{labels[step]}</small></div>)}</div>}
@@ -443,7 +443,7 @@ export default function Account() {
                 {order.status==='delivered' && <div className="customer-return-panel">
                   <strong>Return / refund request</strong>
                   {(order.order_return_requests || []).length > 0 ? <div className="customer-return-status">
-                    <span>Request status: <b>{order.order_return_requests![0].status.replaceAll('_',' ')}</b></span>
+                    <span>Request status: <b>{order.order_return_requests![0].status.replace(/_/g,' ')}</b></span>
                     <small>{order.order_return_requests![0].admin_note ? 'PUASH update: '+order.order_return_requests![0].admin_note : 'Your request is being reviewed by PUASH.'}</small>
                   </div> : <>
                     <p>If there is a problem with your delivered order, submit a return request for review.</p>

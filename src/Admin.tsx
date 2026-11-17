@@ -17,14 +17,14 @@ type Customer = { customer_id: string; email: string | null; full_name: string |
 type ActivityLog = { id:string; actor_id:string|null; actor_name:string; action:string; entity_type:string; entity_id:string|null; entity_label:string; summary:string; old_data:Record<string,any>; new_data:Record<string,any>; created_at:string };
 type StockMovement = { id:string; product_id:string|null; product_name:string; previous_stock:number; new_stock:number; change_quantity:number; movement_type:string; actor_id:string|null; created_at:string };
 type Coupon = { id:string; code:string; discount_type:'percentage'|'fixed'; discount_value:number; min_order_amount:number; max_discount:number|null; starts_at:string|null; expires_at:string|null; usage_limit:number|null; per_user_limit:number; usage_count:number; is_active:boolean };
-type ReturnRequest = { id: string; order_id: string; user_id: string; reason: string; details: string | null; status: string; admin_note: string | null; requested_at: string; orders?: { total_amount: number; shipping_address: any } | null };
+type ReturnRequest = { id: string; order_id: string; user_id: string; reason: string; details: string | null; status: string; admin_note: string | null; requested_at: string; orders?: { total_amount: number; shipping_address: any } | { total_amount: number; shipping_address: any }[] | null };
 type DeliveryZone = { id:string; district:string; is_serviceable:boolean; delivery_fee:number; free_delivery_threshold:number; min_delivery_days:number; max_delivery_days:number; postal_codes:string; };
 type ProductVariant = { id:string; product_id:string; label:string; price:number|null; stock_quantity:number; is_active:boolean; sort_order:number; };
 type Product = {
   id: string; name: string; slug: string; description: string | null;
   price: number; compare_at_price: number | null; image_url: string | null;
   stock_quantity: number; is_active: boolean; category_id: string | null;
-  categories?: { name: string } | null;
+  categories?: { name: string } | { name: string }[] | null;
 };
 
 const money = (value: number) => '₹' + Number(value || 0).toLocaleString('en-IN');
@@ -88,7 +88,7 @@ export default function Admin() {
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [customerLoading, setCustomerLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'sales' | 'analytics' | 'products' | 'orders' | 'customers' | 'returns' | 'coupons' | 'inventory' | 'activity' | 'delivery' | 'sellers'>('sales');
+  const [activeTab, setActiveTab] = useState<'sales' | 'analytics' | 'products' | 'orders' | 'customers' | 'returns' | 'coupons' | 'inventory' | 'activity' | 'delivery' | 'sellers' | 'fulfilments' | 'settlements'>('sales');
   const [analyticsRange, setAnalyticsRange] = useState<'7'|'30'|'90'|'365'>('30');
   const [orderBusy, setOrderBusy] = useState<string | null>(null);
   const [shippingDrafts, setShippingDrafts] = useState<Record<string, { courier: string; tracking: string }>>({});
@@ -646,7 +646,7 @@ export default function Admin() {
   },{})).sort((a,b)=>b.revenue-a.revenue).slice(0,8);
   const analyticsCategoryRows = Object.values(analyticsDelivered.flatMap(order=>order.order_items||[]).reduce((acc:Record<string,{name:string;units:number;revenue:number}>,item)=>{
     const product=products.find(p=>p.id===item.product_id);
-    const key=product?.categories?.name||'Category unavailable';
+    const key=(Array.isArray(product?.categories) ? product.categories[0]?.name : product?.categories?.name)||'Category unavailable';
     if(!acc[key]) acc[key]={name:key,units:0,revenue:0};
     acc[key].units+=Number(item.quantity||0);
     acc[key].revenue+=Number(item.unit_price||0)*Number(item.quantity||0);
@@ -841,9 +841,9 @@ export default function Admin() {
         <div className="admin-panel-heading"><div><span className="admin-panel-icon"><Package size={17}/></span><strong>Store catalogue <small>({products.length})</small></strong></div><button className="admin-link" onClick={loadData}>Refresh list</button></div>
         <input className="admin-product-search" value={productSearch} onChange={e=>setProductSearch(e.target.value)} placeholder="Search products by name or category…" aria-label="Search products"/>
         {busy && products.length === 0 ? <div className="admin-empty">Loading products…</div> : products.length === 0 ? <div className="admin-empty">Abhi koi product nahi hai. Upar form se pehla product add karein.</div> :
-          <div className="admin-product-list">{products.filter(p => (p.name + ' ' + (p.categories?.name || '')).toLowerCase().includes(productSearch.toLowerCase())).map(p=><article className="admin-product-row" key={p.id}>
+          <div className="admin-product-list">{products.filter(p => (p.name + ' ' + (Array.isArray(p.categories) ? p.categories[0]?.name || '' : p.categories?.name || '')).toLowerCase().includes(productSearch.toLowerCase())).map(p=><article className="admin-product-row" key={p.id}>
             <div className="admin-thumb">{p.image_url ? <img src={p.image_url} alt=""/> : <Package size={22}/>}</div>
-            <div className="admin-product-copy"><strong>{p.name}</strong><small>{p.categories?.name || 'Uncategorised'}</small><b>{money(p.price)} {p.compare_at_price ? <del>{money(p.compare_at_price)}</del> : null}</b>
+            <div className="admin-product-copy"><strong>{p.name}</strong><small>{(Array.isArray(p.categories) ? p.categories[0]?.name : p.categories?.name) || 'Uncategorised'}</small><b>{money(p.price)} {p.compare_at_price ? <del>{money(p.compare_at_price)}</del> : null}</b>
               <div className="admin-stock-control"><span className={p.stock_quantity <= 5 ? 'admin-stock-low' : ''}>Stock: {p.stock_quantity}{p.stock_quantity <= 5 ? ' · Low stock' : ''}</span><button disabled={orderBusy===p.id || p.stock_quantity<=0} onClick={()=>adjustStock(p,-1)} aria-label="Decrease stock">−</button><button disabled={orderBusy===p.id} onClick={()=>adjustStock(p,1)} aria-label="Increase stock">+</button></div>
             </div>
             <span className={p.is_active ? 'admin-status live' : 'admin-status'}>{p.is_active ? 'Live' : 'Hidden'}</span>
@@ -875,7 +875,7 @@ export default function Admin() {
           <p className="admin-shipping-help">Stock changes made here, in product edits, and during customer orders are automatically recorded in the movement history.</p>
           <div className="inventory-stock-list">
             {products.filter(p=>p.is_active).sort((a,b)=>a.stock_quantity-b.stock_quantity).map(p=><article className="inventory-stock-row" key={p.id}>
-              <div className="inventory-product"><strong>{p.name}</strong><small>{p.categories?.name||'Uncategorised'}</small></div>
+              <div className="inventory-product"><strong>{p.name}</strong><small>{(Array.isArray(p.categories) ? p.categories[0]?.name : p.categories?.name)||'Uncategorised'}</small></div>
               <span className={p.stock_quantity===0?'inventory-out':p.stock_quantity<=5?'inventory-low':'inventory-ok'}>{p.stock_quantity===0?'Out of stock':p.stock_quantity<=5?'Low stock':'In stock'} · {p.stock_quantity}</span>
               <div className="inventory-set-stock"><input aria-label={'Set stock for '+p.name} type="number" min="0" max="1000000" step="1" value={stockDrafts[p.id]??String(p.stock_quantity)} onChange={e=>setStockDrafts(current=>({...current,[p.id]:e.target.value}))}/><button disabled={orderBusy===p.id} onClick={()=>setStockLevel(p)}>{orderBusy===p.id?'Saving…':'Set stock'}</button></div>
             </article>)}
@@ -938,7 +938,7 @@ export default function Admin() {
         <div className="admin-panel-heading"><div><span className="admin-panel-icon"><RefreshCw size={17}/></span><strong>Return requests <small>({returnRequests.length})</small></strong></div><button className="admin-link" onClick={loadReturnRequests}><RefreshCw size={13}/> Refresh</button></div>
         <p className="admin-shipping-help">Review customer requests. Approving a return does not automatically issue a refund; payment/refund must be handled separately.</p>
         {busy ? <div className="admin-empty">Return requests load ho rahi hain…</div> : returnRequests.length===0 ? <div className="admin-empty">Abhi koi return request nahi hai.</div> : <div className="admin-customer-list">{returnRequests.map(item=><article className="admin-customer-card" key={item.id}>
-          <div className="admin-customer-summary"><span className="admin-customer-avatar"><Package size={18}/></span><span className="admin-customer-identity"><strong>Order #{item.order_id.slice(0,8).toUpperCase()}</strong><small>{item.reason.replaceAll('_',' ')} · {new Date(item.requested_at).toLocaleString('en-IN')}</small><small>{item.orders?.shipping_address?.full_name || 'Customer'} · {money(Number(item.orders?.total_amount || 0))}</small></span><span className={'admin-customer-order-status status-'+item.status}>{item.status.replaceAll('_',' ')}</span></div>
+          <div className="admin-customer-summary"><span className="admin-customer-avatar"><Package size={18}/></span><span className="admin-customer-identity"><strong>Order #{item.order_id.slice(0,8).toUpperCase()}</strong><small>{item.reason.replace(/_/g,' ')} · {new Date(item.requested_at).toLocaleString('en-IN')}</small><small>{(Array.isArray(item.orders) ? item.orders[0]?.shipping_address?.full_name : item.orders?.shipping_address?.full_name) || 'Customer'} · {money(Number((Array.isArray(item.orders) ? item.orders[0]?.total_amount : item.orders?.total_amount) || 0))}</small></span><span className={'admin-customer-order-status status-'+item.status}>{item.status.replace(/_/g,' ')}</span></div>
           {item.details && <p className="admin-shipping-help">Customer note: {item.details}</p>}
           <textarea className="admin-return-note" value={returnNotes[item.id] ?? item.admin_note ?? ''} onChange={e=>setReturnNotes(prev=>({...prev,[item.id]:e.target.value}))} placeholder="Internal/customer response note (optional)" maxLength={1500}/>
           <div className="admin-return-actions">
