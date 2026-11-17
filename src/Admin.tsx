@@ -10,7 +10,7 @@ type ActivityLog = { id:string; actor_id:string|null; actor_name:string; action:
 type StockMovement = { id:string; product_id:string|null; product_name:string; previous_stock:number; new_stock:number; change_quantity:number; movement_type:string; actor_id:string|null; created_at:string };
 type Coupon = { id:string; code:string; discount_type:'percentage'|'fixed'; discount_value:number; min_order_amount:number; max_discount:number|null; starts_at:string|null; expires_at:string|null; usage_limit:number|null; per_user_limit:number; usage_count:number; is_active:boolean };
 type ReturnRequest = { id: string; order_id: string; user_id: string; reason: string; details: string | null; status: string; admin_note: string | null; requested_at: string; orders?: { total_amount: number; shipping_address: any } | null };
-type DeliveryZone = { id:string; district:string; is_serviceable:boolean; delivery_fee:number; free_delivery_threshold:number; min_delivery_days:number; max_delivery_days:number; };
+type DeliveryZone = { id:string; district:string; is_serviceable:boolean; delivery_fee:number; free_delivery_threshold:number; min_delivery_days:number; max_delivery_days:number; postal_codes:string; };
 type ProductVariant = { id:string; product_id:string; label:string; price:number|null; stock_quantity:number; is_active:boolean; };
 type Product = {
   id: string; name: string; slug: string; description: string | null;
@@ -111,15 +111,24 @@ export default function Admin() {
   }, [imageFile]);
 
   const loadDeliveryZones = async () => {
-    const { data, error } = await supabase.from('delivery_zones').select('id,district,is_serviceable,delivery_fee,free_delivery_threshold,min_delivery_days,max_delivery_days').order('district');
-    if (error) setMessage('Delivery zones load nahi hue: ' + error.message);
-    else setDeliveryZones((data || []) as DeliveryZone[]);
+    const [{ data, error }, { data: pinRows, error: pinError }] = await Promise.all([
+      supabase.from('delivery_zones').select('id,district,is_serviceable,delivery_fee,free_delivery_threshold,min_delivery_days,max_delivery_days').order('district'),
+      supabase.from('delivery_zone_postal_codes').select('zone_id,postal_code'),
+    ]);
+    if (error) { setMessage('Delivery zones load nahi hue: ' + error.message); return; }
+    if (pinError) { setMessage('PIN-code settings load nahi hui: ' + pinError.message); return; }
+    const pinsByZone = new Map<string,string[]>();
+    (pinRows || []).forEach((row:any) => pinsByZone.set(row.zone_id,[...(pinsByZone.get(row.zone_id)||[]),row.postal_code]));
+    setDeliveryZones((data || []).map((zone:any) => ({...zone,postal_codes:(pinsByZone.get(zone.id)||[]).join('\n')})) as DeliveryZone[]);
   };
 
   const saveDeliveryZone = async (zone: DeliveryZone) => {
     if (zone.delivery_fee < 0 || zone.free_delivery_threshold < 0 || zone.min_delivery_days < 0 || zone.max_delivery_days < zone.min_delivery_days) {
       setMessage('Delivery fee, free threshold aur delivery days ki values check karein.'); return;
     }
+    const pins = [...new Set(zone.postal_codes.split(/[\s,;]+/).map(pin=>pin.trim()).filter(Boolean))];
+    if (pins.some(pin=>!/^\d{6}$/.test(pin))) { setMessage('Har PIN code exactly 6 digits ka hona chahiye.'); return; }
+    if (pins.length > 1000) { setMessage('Ek district mein maximum 1000 PIN codes add kar sakte hain.'); return; }
     setOrderBusy(zone.id); setMessage('');
     const { error } = await supabase.from('delivery_zones').update({
       is_serviceable: zone.is_serviceable, delivery_fee: zone.delivery_fee,
@@ -127,9 +136,11 @@ export default function Admin() {
       min_delivery_days: zone.min_delivery_days, max_delivery_days: zone.max_delivery_days,
       updated_at: new Date().toISOString(),
     }).eq('id', zone.id);
+    const pinResult = error ? null : await supabase.rpc('set_delivery_zone_postal_codes',{p_zone_id:zone.id,p_postal_codes:pins});
     setOrderBusy(null);
-    setMessage(error ? 'Delivery zone save nahi hua: ' + error.message : zone.district + ' delivery settings save ho gayi.');
-    if (!error) await loadDeliveryZones();
+    const finalError = error || pinResult?.error;
+    setMessage(finalError ? 'Delivery settings save nahi hui: ' + finalError.message : zone.district + ' settings aur ' + pins.length + ' PIN codes save ho gaye.');
+    if (!finalError) await loadDeliveryZones();
   };
 
   const loadData = async () => {
@@ -592,6 +603,7 @@ export default function Admin() {
             <label>Min days<input type="number" min="0" value={zone.min_delivery_days} onChange={e=>setDeliveryZones(items=>items.map(item=>item.id===zone.id?{...item,min_delivery_days:Number(e.target.value)}:item))}/></label>
             <label>Max days<input type="number" min="0" value={zone.max_delivery_days} onChange={e=>setDeliveryZones(items=>items.map(item=>item.id===zone.id?{...item,max_delivery_days:Number(e.target.value)}:item))}/></label>
           </div>
+          <label className="admin-delivery-pin-list">Allowed PIN codes <small>Comma, space ya new line se separate karein. Empty chhorne par poora district eligible rahega.</small><textarea rows={3} value={zone.postal_codes} onChange={e=>setDeliveryZones(items=>items.map(item=>item.id===zone.id?{...item,postal_codes:e.target.value}:item))} placeholder="190001, 190002, 190003" /></label>
           <button className="admin-primary admin-zone-save" disabled={orderBusy===zone.id} onClick={()=>saveDeliveryZone(zone)}>{orderBusy===zone.id?'Saving…':'Save district settings'}</button>
         </article>)}</div>
       </section> : activeTab === 'sales' ? <section className="admin-sales-dashboard">
