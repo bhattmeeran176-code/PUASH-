@@ -79,7 +79,16 @@ export default function Seller() {
     if(error){setOrdersError('Order status update nahi hua: '+error.message);return;}
     await loadSellerOrders();
   };
-  const loadSellerOrders = async () => {\n    setOrdersBusy(true);setOrdersError('');\n    const {data,error}=await supabase.rpc('seller_order_dashboard');\n    if(error)setOrdersError('Orders load nahi hue: '+error.message);\n    else setSellerOrders((data||[]) as SellerOrder[]);\n    setOrdersBusy(false);\n  };\n\n  const loadSellerProducts = async () => {
+  const loadSellerOrders = async () => {
+    setOrdersBusy(true);
+    setOrdersError('');
+    const {data,error}=await supabase.rpc('seller_order_dashboard');
+    if(error) setOrdersError('Orders load nahi hue: '+error.message);
+    else setSellerOrders((data||[]) as SellerOrder[]);
+    setOrdersBusy(false);
+  };
+
+  const loadSellerProducts = async () => {
     if (!application) return;
     const [{data:items,error:itemsError},{data:cats}] = await Promise.all([
       supabase.from('products').select('id,name,description,price,compare_at_price,stock_quantity,image_url,is_active,created_at').eq('seller_application_id',application.id).order('created_at',{ascending:false}),
