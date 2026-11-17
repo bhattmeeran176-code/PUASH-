@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { ArrowLeft, Bell, CheckCircle2, LogOut, MapPin, Plus, ShieldCheck, Trash2, UserRound, X, Package, RefreshCw, ChevronDown, ChevronUp, Heart } from 'lucide-react';
 
 type CustomerOrder = {
@@ -51,6 +52,10 @@ export default function Account() {
   const [ready, setReady] = useState(false);
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [authMethod, setAuthMethod] = useState<'phone' | 'email'>('phone');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [savedName, setSavedName] = useState('');
@@ -160,7 +165,16 @@ export default function Account() {
     if (!user?.id) return;
     const channel = supabase.channel('puash-customer-notifications-' + user.id)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: 'user_id=eq.' + user.id }, payload => {
-        setNotifications(items => [payload.new as any, ...items].slice(0, 40));
+        const notice = payload.new as any;
+        setNotifications(items => [notice, ...items].slice(0, 40));
+        void LocalNotifications.schedule({ notifications: [{
+          id: Math.floor(Date.now() % 2147483647),
+          title: notice.title || 'PUASH update',
+          body: notice.message || 'Aapke order mein naya update hai.',
+          channelId: 'puash_updates',
+          sound: 'default',
+          smallIcon: 'ic_stat_icon_config_sample',
+        }] }).catch(() => undefined);
       }).subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [user?.id]);
@@ -245,6 +259,26 @@ export default function Account() {
         setOrders(ordersRef.current);
       }
     }
+  };
+
+  const sendPhoneOtp = async (event: FormEvent) => {
+    event.preventDefault(); setBusy(true); setError(''); setMessage('');
+    const normalizedPhone = phone.trim().replace(/[\\s()-]/g, '');
+    if (!/^\\+?[1-9]\\d{7,14}$/.test(normalizedPhone)) {
+      setBusy(false); setError('Valid phone number country code ke saath enter karein, jaise +919876543210.'); return;
+    }
+    const { error: otpError } = await supabase.auth.signInWithOtp({ phone: normalizedPhone });
+    setBusy(false);
+    if (otpError) setError(otpError.message);
+    else { setPhone(normalizedPhone); setOtpSent(true); setMessage('OTP SMS bhej diya gaya hai. Apne phone par code check karein.'); }
+  };
+
+  const verifyPhoneOtp = async (event: FormEvent) => {
+    event.preventDefault(); setBusy(true); setError(''); setMessage('');
+    const { error: verifyError } = await supabase.auth.verifyOtp({ phone: phone.trim().replace(/[\\s()-]/g, ''), token: otp.trim(), type: 'sms' });
+    setBusy(false);
+    if (verifyError) setError(verifyError.message);
+    else setMessage('Phone number verify ho gaya. PUASH mein welcome!');
   };
 
   const authenticate = async (event: FormEvent) => {
@@ -340,15 +374,32 @@ export default function Account() {
       {!user ? <>
         <h1>{mode === 'login' ? 'Welcome back.' : 'Create your account.'}</h1>
         <p>{mode === 'login' ? 'Sign in karke apna PUASH shopping account access karein.' : 'PUASH par apna customer account banayein.'}</p>
-        <form className="account-form" onSubmit={authenticate}>
-          {mode === 'signup' && <label>Full name<input value={fullName} onChange={e=>setFullName(e.target.value)} autoComplete="name" required placeholder="Your name"/></label>}
-          <label>Email address<input type="email" value={email} onChange={e=>setEmail(e.target.value)} autoComplete="email" required placeholder="you@example.com"/></label>
-          <label>Password<input type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={8} required placeholder="At least 8 characters"/></label>
-          <button className="account-primary" disabled={busy}>{busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}</button>
-        </form>
-        <button className="account-switch" onClick={()=>{setMode(mode === 'login' ? 'signup' : 'login');setMessage('');setError('')}}>
-          {mode === 'login' ? 'New to PUASH? Create an account' : 'Already have an account? Sign in'}
-        </button>
+        {authMethod === 'phone' ? <>
+          <h1>Continue with your phone.</h1>
+          <p>Apna mobile number enter karein. Hum SMS par secure OTP bhejenge.</p>
+          {!otpSent ? <form className="account-form" onSubmit={sendPhoneOtp}>
+            <label>Mobile number<input type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={e=>setPhone(e.target.value)} required placeholder="+91 98765 43210"/></label>
+            <button className="account-primary" disabled={busy}>{busy ? 'OTP bheja ja raha hai…' : 'Send OTP'}</button>
+          </form> : <form className="account-form" onSubmit={verifyPhoneOtp}>
+            <label>6-digit OTP<input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={otp} onChange={e=>setOtp(e.target.value.replace(/\\D/g,'').slice(0,6))} required placeholder="Enter SMS OTP"/></label>
+            <button className="account-primary" disabled={busy || otp.length < 6}>{busy ? 'Verify ho raha hai…' : 'Verify & continue'}</button>
+            <button type="button" className="account-switch" onClick={()=>{setOtpSent(false);setOtp('');setMessage('')}}>Change number / resend OTP</button>
+          </form>}
+          <button className="account-switch" onClick={()=>{setAuthMethod('email');setOtpSent(false);setError('');setMessage('')}}>Use email and password instead</button>
+        </> : <>
+          <h1>{mode === 'login' ? 'Welcome back.' : 'Create your account.'}</h1>
+          <p>Email se PUASH account access karein.</p>
+          <form className="account-form" onSubmit={authenticate}>
+            {mode === 'signup' && <label>Full name<input value={fullName} onChange={e=>setFullName(e.target.value)} autoComplete="name" required placeholder="Your name"/></label>}
+            <label>Email address<input type="email" value={email} onChange={e=>setEmail(e.target.value)} autoComplete="email" required placeholder="you@example.com"/></label>
+            <label>Password<input type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={8} required placeholder="At least 8 characters"/></label>
+            <button className="account-primary" disabled={busy}>{busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}</button>
+          </form>
+          <button className="account-switch" onClick={()=>{setMode(mode === 'login' ? 'signup' : 'login');setMessage('');setError('')}}>
+            {mode === 'login' ? 'New to PUASH? Create an account' : 'Already have an account? Sign in'}
+          </button>
+          <button className="account-switch" onClick={()=>{setAuthMethod('phone');setError('');setMessage('')}}>Continue with phone OTP</button>
+        </>}
       </> : <>
         <h1>My account.</h1>
         <p>Apni profile aur delivery addresses yahan manage karein.</p>
