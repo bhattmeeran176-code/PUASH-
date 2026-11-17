@@ -39,15 +39,9 @@ jobs:
         run: npx cap add android
 
       - name: Add Firebase Android configuration
-        env:
-          FIREBASE_GOOGLE_SERVICES_JSON: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON }}
         run: |
-          if [ -z "$FIREBASE_GOOGLE_SERVICES_JSON" ]; then
-            echo "::error::Missing FIREBASE_GOOGLE_SERVICES_JSON repository secret."
-            exit 1
-          fi
           mkdir -p android/app
-          printf '%s' "$FIREBASE_GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          cp firebase/google-services.json android/app/google-services.json
           test -s android/app/google-services.json
 
       - name: Sync Capacitor
