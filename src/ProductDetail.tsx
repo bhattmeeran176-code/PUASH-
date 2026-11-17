@@ -17,6 +17,8 @@ const money = (value: number) => '₹' + value.toLocaleString('en-IN');
 export default function ProductDetail() {
   const productId = decodeURIComponent(window.location.pathname.split('/').filter(Boolean)[1] || '');
   const [product, setProduct] = useState<ProductInfo | null>(null);
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const [activeImage, setActiveImage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [message, setMessage] = useState('');
@@ -77,6 +79,7 @@ export default function ProductDetail() {
         .maybeSingle();
       if (cancelled) return;
       if (!error && data) {
+        const { data: extraImages } = await supabase.from('product_images').select('image_url').eq('product_id', productId).order('sort_order').order('created_at');
         const category = Array.isArray(data.categories) ? data.categories[0]?.name : data.categories?.name;
         const viewedProduct = {
           id: data.id, name: data.name,
@@ -86,6 +89,9 @@ export default function ProductDetail() {
           category: category || 'Other',
         };
         setProduct(viewedProduct);
+        const images = [viewedProduct.imageUrl, ...(extraImages || []).map((item: any) => item.image_url)].filter((url): url is string => Boolean(url));
+        setGalleryImages(Array.from(new Set(images)));
+        setActiveImage(0);
         try {
           const current = JSON.parse(localStorage.getItem('puash-recently-viewed') || '[]');
           const item = { id: viewedProduct.id, name: viewedProduct.name, price: viewedProduct.price, image_url: viewedProduct.imageUrl, category: viewedProduct.category };
@@ -164,7 +170,10 @@ export default function ProductDetail() {
         <>
           <article className="detail-layout">
             <div className="detail-gallery">
-              {product.imageUrl ? <img src={product.imageUrl} alt={product.name} /> : <div className="detail-image-placeholder">🛍️</div>}
+              {galleryImages.length ? <>
+                <img src={galleryImages[activeImage] || galleryImages[0]} alt={product.name + ' – image ' + (activeImage + 1)} />
+                {galleryImages.length > 1 && <div className="detail-gallery-thumbs" aria-label="Product images">{galleryImages.map((url, index) => <button type="button" key={url} className={activeImage === index ? 'active' : ''} onClick={() => setActiveImage(index)} aria-label={'Show product image ' + (index + 1)}><img src={url} alt="" /></button>)}</div>}
+              </> : <div className="detail-image-placeholder">🛍️</div>}
             </div>
             <section className="detail-information">
               <div className="eyebrow">PUASH COLLECTION · {product.category.toUpperCase()}</div>
