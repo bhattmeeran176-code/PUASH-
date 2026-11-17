@@ -343,7 +343,6 @@ export default function Admin() {
     const result = editing
       ? await supabase.from('products').update(payload).eq('id', editing).select('id').single()
       : await supabase.from('products').insert(payload).select('id').single();
-    setBusy(false);
     if (result.error) {
       if (uploadedImagePath) await supabase.storage.from('product-images').remove([uploadedImagePath]);
       setMessage('Save nahi hua: ' + result.error.message);
@@ -363,6 +362,7 @@ export default function Admin() {
       const { error: galleryError } = await supabase.from('product_images').insert(galleryRows);
       if (galleryError) { setBusy(false); setMessage('Product save ho gaya, lekin gallery record save nahi hua: ' + galleryError.message); await loadData(); return; }
     }
+    setBusy(false);
     setMessage(editing ? 'Product update ho gaya.' : 'Product add ho gaya.');
     resetForm(); await loadData();
   };
