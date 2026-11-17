@@ -69,6 +69,7 @@ const rememberViewedProduct = (product: Product) => {
 function App() {
   const [category, setCategory] = useState('All');
   const [products, setProducts] = useState<Product[]>([]);
+  const [productsLoading, setProductsLoading] = useState(true);
   const [productVariants, setProductVariants] = useState<ProductVariant[]>([]);
   const [categories, setCategories] = useState(sampleCategories);
   const [search, setSearch] = useState('');
@@ -218,6 +219,7 @@ function App() {
       } else if (categoryResult.error) {
         console.warn('PUASH categories could not be loaded:', categoryResult.error.message);
       }
+      setProductsLoading(false);
     }
     loadStoreData();
     return () => { cancelled = true; };
@@ -736,7 +738,21 @@ function App() {
             <label className="saved-only-filter"><input type="checkbox" checked={savedOnly} onChange={event => setSavedOnly(event.target.checked)}/> Saved items only</label><button type="button" className="clear-filter-button" onClick={() => { setMinPrice(''); setMaxPrice(''); setMinRating('0'); setSavedOnly(false); setSort('featured'); setSearch(''); setCategory('All'); }}>Clear filters</button>
           </div>
           {minPrice !== '' && maxPrice !== '' && Number(minPrice) > Number(maxPrice) && <p className="filter-validation" role="alert">Minimum price cannot be greater than maximum price.</p>}
-          {minPrice !== '' && maxPrice !== '' && Number(minPrice) > Number(maxPrice) ? <div className="empty-results"><h3>Check your price range</h3><p>Minimum price should not exceed maximum price.</p></div> : visibleProducts.length > 0 ? (
+          {minPrice !== '' && maxPrice !== '' && Number(minPrice) > Number(maxPrice) ? <div className="empty-results"><h3>Check your price range</h3><p>Minimum price should not exceed maximum price.</p></div> : productsLoading ? (
+            <div className="product-grid product-grid-loading" aria-label="Loading products" aria-busy="true">
+              {Array.from({ length: 4 }, (_, index) => (
+                <div className="product-skeleton" key={'product-skeleton-' + index}>
+                  <div className="skeleton-image" />
+                  <div className="skeleton-copy">
+                    <span className="skeleton-line skeleton-category" />
+                    <span className="skeleton-line skeleton-name" />
+                    <span className="skeleton-line skeleton-price" />
+                    <span className="skeleton-button" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : visibleProducts.length > 0 ? (
             <div className="product-grid">
               {visibleProducts.map(product => {
                 const discount = Math.round(
