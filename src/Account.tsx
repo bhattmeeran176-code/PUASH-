@@ -410,9 +410,14 @@ export default function Account() {
               if (!user) return;
               setOrdersBusy(true);
               const {data,error:loadError}=await supabase.from('orders').select('id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,created_at,courier_name,tracking_number,shipped_at,delivered_at,coupon_code,discount_amount,order_items(id,product_name,unit_price,quantity),order_return_requests(id,reason,details,status,admin_note,requested_at))').eq('user_id',user.id).order('created_at',{ascending:false}).limit(30);
-              setOrdersBusy(false);
               if(loadError) setError('Orders refresh nahi huye: '+loadError.message);
-              else { ordersRef.current = (data||[]) as CustomerOrder[]; setOrders(ordersRef.current); }
+              else {
+                ordersRef.current = (data||[]) as CustomerOrder[]; setOrders(ordersRef.current);
+                const orderIds=ordersRef.current.map(order=>order.id);
+                if(orderIds.length){const {data:fulfillmentData,error:fulfillmentError}=await supabase.rpc('customer_order_fulfillments',{p_order_ids:orderIds});if(fulfillmentError)setError('Seller delivery updates refresh nahi huye: '+fulfillmentError.message);else setSellerFulfillments((fulfillmentData||[]) as CustomerSellerFulfillment[]);}
+                else setSellerFulfillments([]);
+              }
+              setOrdersBusy(false);
             }}><RefreshCw size={14}/> Refresh</button>
           </div>
           <p className="address-hint">Apne recent orders aur delivery status yahan check karein.</p>
