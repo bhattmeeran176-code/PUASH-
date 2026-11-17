@@ -336,8 +336,8 @@ export default function Admin() {
 
   const saveVariant = async (event: FormEvent) => {
     event.preventDefault();
-    if (!managedVariantProduct || !variantLabel.trim() || !Number.isInteger(Number(variantStock)) || Number(variantStock) < 0 || (variantPrice && (!Number.isFinite(Number(variantPrice)) || Number(variantPrice) < 0))) {
-      setMessage('Option label, valid stock aur optional valid price enter karein.'); return;
+    if (!managedVariantProduct || !variantLabel.trim() || !Number.isInteger(Number(variantStock)) || Number(variantStock) < 0 || Number(variantStock) > 1000000 || (variantPrice && (!Number.isFinite(Number(variantPrice)) || Number(variantPrice) < 0))) {
+      setMessage('Option label, price valid honi chahiye aur stock 0 se 10,00,000 whole number ke beech hona chahiye.'); return;
     }
     const normalizedLabel = variantLabel.trim().toLocaleLowerCase();
     if (managedVariants.some(item => item.id !== editingVariantId && item.label.trim().toLocaleLowerCase() === normalizedLabel)) {
@@ -398,6 +398,7 @@ export default function Admin() {
 
   const adjustStock = async (product: Product, change: number) => {
     const nextStock = Math.max(0, product.stock_quantity + change);
+    if (nextStock > 1000000) { setMessage('Stock 10,00,000 se zyada nahi ho sakta.'); return; }
     setOrderBusy(product.id);
     setMessage('');
     const { error } = await supabase.from('products')
@@ -415,7 +416,7 @@ export default function Admin() {
     event.preventDefault();
     if (!name.trim() || !price || !Number.isFinite(Number(price)) || Number(price) <= 0) { setMessage('Product name aur valid price required hain.'); return; }
     if (comparePrice && (!Number.isFinite(Number(comparePrice)) || Number(comparePrice) < Number(price))) { setMessage('MRP compare price, selling price se zyada ya barabar hona chahiye.'); return; }
-    if (!Number.isInteger(Number(stock)) || Number(stock) < 0) { setMessage('Stock quantity 0 ya usse zyada whole number honi chahiye.'); return; }
+    if (!Number.isInteger(Number(stock)) || Number(stock) < 0 || Number(stock) > 1000000) { setMessage('Stock quantity 0 se 10,00,000 ke beech whole number honi chahiye.'); return; }
     if (imageFile && (!['image/jpeg', 'image/png', 'image/webp'].includes(imageFile.type) || imageFile.size > 5 * 1024 * 1024)) { setMessage('Image JPG, PNG ya WebP ho aur 5 MB se chhoti ho.'); return; }
     if (galleryFiles.length > 8 || galleryFiles.some(file => !['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024)) { setMessage('Gallery mein maximum 8 images add karein. Har image JPG, PNG ya WebP aur 5 MB se chhoti honi chahiye.'); return; }
     setBusy(true); setMessage('');
@@ -677,7 +678,7 @@ export default function Admin() {
           <label>Category<select value={categoryId} onChange={e=>setCategoryId(e.target.value)} required><option value="">Select category</option>{categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
           <label>Price (₹)<input type="number" min="1" step="0.01" value={price} onChange={e=>setPrice(e.target.value)} required placeholder="999"/></label>
           <label>MRP / Compare price (₹)<input type="number" min="0" step="0.01" value={comparePrice} onChange={e=>setComparePrice(e.target.value)} placeholder="Optional"/></label>
-          <label>Stock quantity<input type="number" min="0" step="1" value={stock} onChange={e=>setStock(e.target.value)} required/></label>
+          <label>Stock quantity<input type="number" min="0" max="1000000" step="1" value={stock} onChange={e=>setStock(e.target.value)} required/></label>
           <label className="admin-wide">Description<textarea value={description} onChange={e=>setDescription(e.target.value)} rows={3} placeholder="Product details…"/></label>
           <label className="admin-wide">Main product image<input type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>setImageFile(e.target.files?.[0] || null)}/><small>JPG, PNG or WebP · Maximum 5 MB</small></label>
            <label className="admin-wide">Additional gallery images<input type="file" accept="image/png,image/jpeg,image/webp" multiple onChange={e=>setGalleryFiles(Array.from(e.target.files || []))}/><small>Up to 8 extra images · Each maximum 5 MB. Existing gallery images are kept when editing.</small></label>
@@ -706,7 +707,7 @@ export default function Admin() {
               <form className="admin-variant-form" onSubmit={saveVariant}>
                 <label>Option label<input value={variantLabel} onChange={e=>setVariantLabel(e.target.value)} maxLength={120} required placeholder="Size M · Blue"/></label>
                 <label>Price (₹, optional)<input type="number" min="0" step="0.01" value={variantPrice} onChange={e=>setVariantPrice(e.target.value)} placeholder="Use base price"/></label>
-                <label>Option stock<input type="number" min="0" step="1" value={variantStock} onChange={e=>setVariantStock(e.target.value)} required/></label>
+                <label>Option stock<input type="number" min="0" max="1000000" step="1" value={variantStock} onChange={e=>setVariantStock(e.target.value)} required/></label>
                 <button className="admin-primary" disabled={variantBusy}>{variantBusy?'Saving…':editingVariantId?'Update option':'Add option'}</button>
                 {editingVariantId && <button type="button" onClick={()=>{setEditingVariantId(null);setVariantLabel('');setVariantPrice('');setVariantStock('0');}}>Cancel edit</button>}
               </form>
