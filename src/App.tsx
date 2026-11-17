@@ -78,6 +78,7 @@ function App() {
   const [maxPrice, setMaxPrice] = useState('');
   const [minRating, setMinRating] = useState('0');
   const [savedOnly, setSavedOnly] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [cart, setCart] = useState<Record<string, number>>(() => {
     try {
       return JSON.parse(localStorage.getItem('puash-cart') || '{}');
@@ -615,7 +616,6 @@ function App() {
               <div className="market-promo-emblem" aria-hidden="true"><ShoppingBag size={68}/><span>PUASH</span></div>
             </div>
           )}
-          <div className="market-promo-dots" aria-hidden="true"><i/><i/><i/></div>
         </section>
 
         <section className="home-category-section market-categories" aria-labelledby="home-category-title">
@@ -643,9 +643,9 @@ function App() {
         <section className="products-section" id="products">
           <div className="section-heading">
             <div>
-              <div className="eyebrow">A LITTLE BIT OF EVERYTHING</div>
+              <div className="eyebrow">CURATED FOR EVERYDAY</div>
               <h2>{discountedProducts.length > 0 && category === 'All' ? 'Flash Sale' : category === 'All' ? 'Explore products' : category}</h2>
-              <p>Find something useful, lovely or just right for you.</p>
+              <p>Thoughtful finds for your everyday life.</p>
             </div>
             <label className="sort-control">
               <SlidersHorizontal size={16} />
@@ -678,13 +678,21 @@ function App() {
               </button>
             ))}
           </div>
-          <div className="advanced-filter-panel" aria-label="Filter products">
+          <div className="market-filter-row">
+            <button type="button" className={filtersOpen ? 'market-filter-toggle is-open' : 'market-filter-toggle'} onClick={() => setFiltersOpen(value => !value)} aria-expanded={filtersOpen}>
+              <SlidersHorizontal size={15}/><span>Filters</span><ChevronRight size={14}/>
+            </button>
+            <span className="market-results-note">{visibleProducts.length} products</span>
+          </div>
+          {filtersOpen && (
+            <div className="advanced-filter-panel" aria-label="Filter products">
             <div className="advanced-filter-title"><SlidersHorizontal size={15}/><strong>Refine your search</strong></div>
             <label className="filter-field"><span>Min price (₹)</span><input inputMode="numeric" type="number" min="0" placeholder="No minimum" value={minPrice} onChange={event => setMinPrice(event.target.value)}/></label>
             <label className="filter-field"><span>Max price (₹)</span><input inputMode="numeric" type="number" min="0" placeholder="No maximum" value={maxPrice} onChange={event => setMaxPrice(event.target.value)}/></label>
             <label className="filter-field"><span>Minimum rating</span><select value={minRating} onChange={event => setMinRating(event.target.value)}><option value="0">Any rating</option><option value="3">3★ & above</option><option value="4">4★ & above</option><option value="4.5">4.5★ & above</option></select></label>
             <label className="saved-only-filter"><input type="checkbox" checked={savedOnly} onChange={event => setSavedOnly(event.target.checked)}/> Saved items only</label><button type="button" className="clear-filter-button" onClick={() => { setMinPrice(''); setMaxPrice(''); setMinRating('0'); setSavedOnly(false); setSort('featured'); setSearch(''); setCategory('All'); }}>Clear filters</button>
-          </div>
+            </div>
+          )}
           {minPrice !== '' && maxPrice !== '' && Number(minPrice) > Number(maxPrice) && <p className="filter-validation" role="alert">Minimum price cannot be greater than maximum price.</p>}
           {minPrice !== '' && maxPrice !== '' && Number(minPrice) > Number(maxPrice) ? <div className="empty-results"><h3>Check your price range</h3><p>Minimum price should not exceed maximum price.</p></div> : productsLoading ? (
             <div className="product-grid product-grid-loading" aria-label="Loading products" aria-busy="true">
