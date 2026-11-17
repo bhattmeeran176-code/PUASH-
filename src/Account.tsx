@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase';
-import { ArrowLeft, CheckCircle2, LogOut, MapPin, Plus, ShieldCheck, Trash2, UserRound, X, Package, RefreshCw, ChevronDown, ChevronUp, Heart } from 'lucide-react';
+import { ArrowLeft, Bell, CheckCircle2, LogOut, MapPin, Plus, ShieldCheck, Trash2, UserRound, X, Package, RefreshCw, ChevronDown, ChevronUp, Heart } from 'lucide-react';
 
 type CustomerOrder = {
   id: string;
@@ -61,11 +61,34 @@ export default function Account() {
   const [ordersBusy, setOrdersBusy] = useState(false);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [statusNotification, setStatusNotification] = useState('');
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notificationsBusy, setNotificationsBusy] = useState(false);
   const [returnDrafts, setReturnDrafts] = useState<Record<string,{reason:string;details:string}>>({});
   const [returnBusy, setReturnBusy] = useState<string|null>(null);
   const [addressForm, setAddressForm] = useState(blankAddress);
   const [editingAddress, setEditingAddress] = useState<string | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
+
+  const loadNotifications = async (userId: string) => {
+    setNotificationsBusy(true);
+    const { data, error: loadError } = await supabase.from('notifications').select('id,title,message,type,related_order_id,is_read,created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(40);
+    setNotificationsBusy(false);
+    if (loadError) setError('Notifications load nahi hui: ' + loadError.message);
+    else setNotifications(data || []);
+  };
+
+  const markNotificationRead = async (id: string) => {
+    const { error: updateError } = await supabase.from('notifications').update({ is_read: true }).eq('id', id).eq('user_id', user.id);
+    if (updateError) setError('Notification update nahi hui: ' + updateError.message);
+    else setNotifications(items => items.map(item => item.id === id ? { ...item, is_read: true } : item));
+  };
+
+  const markAllNotificationsRead = async () => {
+    if (!user) return;
+    const { error: updateError } = await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false);
+    if (updateError) setError('Notifications update nahi hui: ' + updateError.message);
+    else setNotifications(items => items.map(item => ({ ...item, is_read: true })));
+  };
 
   const loadRecentlyViewed = () => {
     try {
@@ -78,6 +101,7 @@ export default function Account() {
     setUser(current);
     loadRecentlyViewed();
     if (current) {
+      void loadNotifications(current.id);
       const [{ data, error: profileError }, { data: addressData, error: addressError }, { data: orderData, error: orderError }, { data: wishlistData, error: wishlistError }] = await Promise.all([
         supabase.from('profiles').select('full_name').eq('id', current.id).maybeSingle(),
         supabase.from('customer_addresses').select('*').eq('user_id', current.id).order('is_default', { ascending: false }).order('created_at', { ascending: false }),
@@ -97,6 +121,7 @@ export default function Account() {
       setOrders(ordersRef.current);
     } else {
       setAddresses([]);
+      setNotifications([]);
       setSavedProducts([]);
       ordersRef.current = [];
       setOrders([]);
@@ -114,6 +139,15 @@ export default function Account() {
     });
     return () => { alive = false; listener.subscription.unsubscribe(); };
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase.channel('puash-customer-notifications-' + user.id)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: 'user_id=eq.' + user.id }, payload => {
+        setNotifications(items => [payload.new as any, ...items].slice(0, 40));
+      }).subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -293,6 +327,22 @@ export default function Account() {
         <h1>My account.</h1>
         <p>Apni profile aur delivery addresses yahan manage karein.</p>
         <div className="account-email"><small>Signed in as</small><strong>{user.email}</strong></div>
+        <section className="account-notifications">
+          <div className="address-book-heading">
+            <div><Bell size={18}/><strong>Notifications</strong><span className="customer-order-count">{notifications.filter(item => !item.is_read).length}</span></div>
+            <div className="notification-actions">
+              <button type="button" className="address-add" disabled={!notifications.some(item => !item.is_read)} onClick={markAllNotificationsRead}>Mark all read</button>
+              <button type="button" className="address-add" disabled={notificationsBusy} onClick={() => loadNotifications(user.id)}><RefreshCw size={14}/> Refresh</button>
+            </div>
+          </div>
+          <p className="address-hint">Order, shipping aur return request ke updates yahan milenge.</p>
+          {notificationsBusy ? <div className="address-empty">Notifications load ho rahi hain…</div> : notifications.length === 0 ? <div className="address-empty">Abhi koi notification nahi hai.</div> :
+            <div className="notification-list">{notifications.map(item => <article className={'notification-item ' + (item.is_read ? 'is-read' : 'is-unread')} key={item.id}>
+              <div className="notification-copy"><strong>{item.title}</strong><p>{item.message}</p><small>{new Date(item.created_at).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'})}</small></div>
+              {!item.is_read && <button type="button" onClick={() => markNotificationRead(item.id)}>Mark read</button>}
+              {item.related_order_id && <a href="#orders" onClick={() => setExpandedOrderId(item.related_order_id)}>View order</a>}
+            </article>)}</div>}
+        </section>
         <form className="account-form" onSubmit={saveProfile}>
           <label>Full name<input value={fullName} onChange={e=>setFullName(e.target.value)} autoComplete="name" placeholder="Your name"/></label>
           <button className="account-primary" disabled={busy || fullName.trim() === savedName}>{busy ? 'Saving…' : 'Save profile'}</button>
@@ -344,7 +394,7 @@ export default function Account() {
               <div><a href={'/product/'+product.id}>View product</a></div>
             </article>)}</div>}
         </section>
-        <section className="customer-orders">
+        <section className="customer-orders" id="orders">
           {statusNotification && <div className="order-live-notice"><CheckCircle2 size={16}/><span>{statusNotification}</span><button type="button" onClick={()=>setStatusNotification('')} aria-label="Dismiss notification"><X size={15}/></button></div>}
           <div className="address-book-heading">
             <div><Package size={18}/><strong>My orders</strong><span className="customer-order-count">{orders.length}</span></div>
