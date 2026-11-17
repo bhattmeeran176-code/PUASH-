@@ -2040,3 +2040,24 @@ main {
 .checkout-price-breakdown .checkout-discount{color:#15803d}
 .checkout-price-breakdown .checkout-total{padding-top:10px;border-top:1px solid var(--line);font-size:13px}
 @media(max-width:420px){.admin-coupon-grid{grid-template-columns:1fr}.admin-coupon-card{flex-wrap:wrap}.admin-coupon-card>div{flex-basis:100%}}
+
+
+.inventory-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:14px 0}
+.inventory-summary article{padding:12px;border:1px solid var(--line);border-radius:7px;display:flex;flex-direction:column;gap:6px;background:#fbfaf7}
+.inventory-summary small{font-size:10px;color:var(--muted)}
+.inventory-summary strong{font-size:21px;font-weight:700}
+.inventory-stock-list,.inventory-history{display:flex;flex-direction:column}
+.inventory-stock-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.inventory-product{display:flex;flex-direction:column;gap:4px;min-width:0}
+.inventory-product strong,.inventory-history-row strong{font-size:12px;overflow-wrap:anywhere}
+.inventory-product small,.inventory-history-row small{font-size:10px;color:var(--muted)}
+.inventory-ok,.inventory-low,.inventory-out{font-size:10px;font-weight:700;white-space:nowrap}
+.inventory-ok{color:#15803d}.inventory-low{color:#b45309}.inventory-out{color:#b91c1c}
+.inventory-set-stock{display:flex;gap:5px;align-items:center}
+.inventory-set-stock input{width:68px;min-width:0;padding:7px;border:1px solid var(--line);border-radius:5px;font:inherit;font-size:11px}
+.inventory-set-stock button{padding:7px 9px;border:1px solid var(--line);border-radius:5px;background:white;color:var(--ink);font:inherit;font-size:10px;font-weight:600;white-space:nowrap}
+.inventory-history-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+.inventory-history-row>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.inventory-increase{color:#15803d;font-size:11px;font-weight:700;white-space:nowrap}
+.inventory-decrease{color:#b45309;font-size:11px;font-weight:700;white-space:nowrap}
+@media(max-width:520px){.inventory-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.inventory-stock-row{grid-template-columns:minmax(0,1fr) auto;gap:8px}.inventory-set-stock{grid-column:1/-1;justify-content:flex-end}.inventory-history-row{grid-template-columns:minmax(0,1fr) auto}.inventory-history-row>small{grid-column:1/-1}}
