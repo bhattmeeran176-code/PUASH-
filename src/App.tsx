@@ -16,7 +16,6 @@ import {
   Home,
   MapPin,
   Minus,
-  PackageCheck,
   Plus,
   Search,
   ShieldCheck,
@@ -26,7 +25,6 @@ import {
   Sparkles,
   Star,
   UserRound,
-  Truck,
   X,
 } from 'lucide-react';
 
@@ -290,7 +288,6 @@ function App() {
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cartItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
   const activeCheckoutAddress = checkoutAddresses.find(address => address.id === selectedAddressId);
-  const selectedDeliveryZone = deliveryZones.find(zone => zone.district.toLowerCase() === String(activeCheckoutAddress?.district || '').toLowerCase());
   useEffect(() => {
     let current = true;
     if (!checkoutOpen || !selectedAddressId || subtotal <= 0) {
@@ -304,7 +301,7 @@ function App() {
       if (!current) return;
       setDeliveryQuote(error ? { serviceable: false, reason: error.message || 'Delivery could not be verified' } : data);
       setDeliveryQuoteBusy(false);
-    }).catch(() => {
+    }, () => {
       if (!current) return;
       setDeliveryQuote({ serviceable: false, reason: 'Delivery could not be verified. Please try again.' });
       setDeliveryQuoteBusy(false);
@@ -478,61 +475,6 @@ function App() {
   const newArrivals = [...inStockProducts]
     .sort((a, b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || ''))
     .slice(0, 4);
-  const topRatedProducts = [...inStockProducts]
-    .filter(product => product.reviews > 0)
-    .sort((a, b) => b.rating - a.rating || b.reviews - a.reviews)
-    .slice(0, 4);
-  const popularProducts = [...inStockProducts]
-    .filter(product => product.reviews > 0)
-    .sort((a, b) => b.reviews - a.reviews || b.rating - a.rating)
-    .slice(0, 4);
-  const newArrivalIds = new Set(newArrivals.map(product => product.id));
-  const recommendedProducts = [...inStockProducts]
-    .filter(product => !newArrivalIds.has(product.id))
-    .sort((a, b) => {
-      const discountA = a.mrp > 0 ? (a.mrp - a.price) / a.mrp : 0;
-      const discountB = b.mrp > 0 ? (b.mrp - b.price) / b.mrp : 0;
-      return discountB - discountA || b.rating - a.rating;
-    })
-    .slice(0, 4);
-  const recentlyViewedProducts = recentlyViewedIds
-    .map(id => products.find(product => product.id === id))
-    .filter((product): product is Product => Boolean(product && product.stock > 0));
-
-  const renderHomeShelf = (title: string, kicker: string, items: Product[], sectionId: string) => (
-    items.length > 0 ? (
-      <section className="home-shelf" aria-labelledby={sectionId}>
-        <div className="home-shelf-heading">
-          <div><span className="eyebrow">{kicker}</span><h2 id={sectionId}>{title}</h2></div>
-          <button type="button" onClick={startShopping}>View all <ArrowRight size={15}/></button>
-        </div>
-        <div className="home-shelf-grid">
-          {items.map(product => {
-            const discount = product.mrp > product.price && product.mrp > 0
-              ? Math.round((1 - product.price / product.mrp) * 100) : 0;
-            return (
-              <article className="home-shelf-card" key={sectionId + product.id}>
-                <button className="home-shelf-image" type="button" onClick={() => {
-                  rememberViewedProduct(product);
-                  window.location.href = '/product/' + product.id;
-                }} aria-label={'View ' + product.name}>
-                  {product.imageUrl ? <img src={product.imageUrl} alt={product.name}/> : <span>{product.emoji}</span>}
-                  {discount > 0 && <b>{discount}% OFF</b>}
-                </button>
-                <div className="home-shelf-info">
-                  <small>{product.category}</small>
-                  <button className="home-shelf-name" type="button" onClick={() => { rememberViewedProduct(product); window.location.href = '/product/' + product.id; }}>{product.name}</button>
-                  <div><strong>{money(product.price)}</strong>{product.mrp > product.price && <del>{money(product.mrp)}</del>}</div>
-                  <button className="home-shelf-add" type="button" onClick={() => addToCart(product)}><Plus size={14}/> Add to cart</button>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-    ) : null
-  );
-
   return (
     <div className="app-shell">
       <div className="top-strip">
