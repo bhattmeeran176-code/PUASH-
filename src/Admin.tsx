@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 import { ArrowLeft, BarChart3, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X, AlertTriangle, TrendingUp, Users, UserRound, ChevronDown, ChevronUp, Download, Activity } from 'lucide-react';
 
 type Category = { id: string; name: string };
-type OrderItem = { id: string; product_name: string; unit_price: number; quantity: number };
+type OrderItem = { id: string; product_id?: string | null; product_name: string; unit_price: number; quantity: number };
 type Order = { id: string; user_id: string; status: string; total_amount: number; subtotal_amount: number | null; delivery_fee: number; payment_method: string; shipping_address: any; customer_note: string | null; created_at: string; coupon_code: string | null; discount_amount: number; courier_name: string | null; tracking_number: string | null; shipped_at: string | null; delivered_at: string | null; order_items: OrderItem[] };
 type Customer = { customer_id: string; email: string | null; full_name: string | null; joined_at: string; order_count: number; delivered_spend: number };
 type ActivityLog = { id:string; actor_id:string|null; actor_name:string; action:string; entity_type:string; entity_id:string|null; entity_label:string; summary:string; old_data:Record<string,any>; new_data:Record<string,any>; created_at:string };
@@ -55,7 +55,8 @@ export default function Admin() {
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [customerLoading, setCustomerLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'sales' | 'products' | 'orders' | 'customers' | 'returns' | 'coupons' | 'inventory' | 'activity'>('sales');
+  const [activeTab, setActiveTab] = useState<'sales' | 'analytics' | 'products' | 'orders' | 'customers' | 'returns' | 'coupons' | 'inventory' | 'activity'>('sales');
+  const [analyticsRange, setAnalyticsRange] = useState<'7'|'30'|'90'|'365'>('30');
   const [orderBusy, setOrderBusy] = useState<string | null>(null);
   const [shippingDrafts, setShippingDrafts] = useState<Record<string, { courier: string; tracking: string }>>({});
   const [productSearch, setProductSearch] = useState('');
@@ -149,7 +150,7 @@ export default function Admin() {
 
   const loadOrders = async () => {
     const { data, error } = await supabase.from('orders')
-      .select('id,user_id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,customer_note,created_at,coupon_code,discount_amount,courier_name,tracking_number,shipped_at,delivered_at,order_items(id,product_name,unit_price,quantity)')
+      .select('id,user_id,status,total_amount,subtotal_amount,delivery_fee,payment_method,shipping_address,customer_note,created_at,coupon_code,discount_amount,courier_name,tracking_number,shipped_at,delivered_at,order_items(id,product_id,product_name,unit_price,quantity)')
       .order('created_at', { ascending: false });
     if (error) setMessage('Orders load nahi hue: ' + error.message);
     else setOrders((data || []) as Order[]);
@@ -395,6 +396,52 @@ export default function Admin() {
   });
   const maxMonthlySales = Math.max(1, ...monthlySales.map(item => item.amount));
 
+  const analyticsDays = Number(analyticsRange);
+  const analyticsEnd = new Date();
+  const analyticsStart = new Date(analyticsEnd.getTime() - analyticsDays * 86400000);
+  const previousStart = new Date(analyticsStart.getTime() - analyticsDays * 86400000);
+  const inAnalyticsRange = (order: Order, start: Date, end: Date) => {
+    const created = new Date(order.created_at).getTime();
+    return created >= start.getTime() && created < end.getTime();
+  };
+  const analyticsOrders = genuineOrders.filter(order => inAnalyticsRange(order, analyticsStart, analyticsEnd));
+  const previousAnalyticsOrders = genuineOrders.filter(order => inAnalyticsRange(order, previousStart, analyticsStart));
+  const analyticsDelivered = analyticsOrders.filter(order => order.status === 'delivered');
+  const previousDelivered = previousAnalyticsOrders.filter(order => order.status === 'delivered');
+  const analyticsRevenue = analyticsDelivered.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+  const previousRevenue = previousDelivered.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+  const analyticsAov = analyticsDelivered.length ? analyticsRevenue / analyticsDelivered.length : 0;
+  const previousAov = previousDelivered.length ? previousRevenue / previousDelivered.length : 0;
+  const analyticsUnits = analyticsOrders.filter(order => order.status !== 'cancelled').reduce((sum, order) => sum + (order.order_items || []).reduce((n,item) => n + Number(item.quantity || 0),0),0);
+  const analyticsCancelled = analyticsOrders.filter(order => order.status === 'cancelled').length;
+  const analyticsCancellationRate = analyticsOrders.length ? analyticsCancelled / analyticsOrders.length * 100 : 0;
+  const percentChange = (current:number, previous:number) => previous > 0 ? ((current-previous)/previous)*100 : current > 0 ? 100 : 0;
+  const analyticsProductRows = Object.values(analyticsDelivered.flatMap(order=>order.order_items||[]).reduce((acc:Record<string,{name:string;units:number;revenue:number}>,item)=>{
+    const key=item.product_id||item.product_name;
+    if(!acc[key]) acc[key]={name:item.product_name,units:0,revenue:0};
+    acc[key].units+=Number(item.quantity||0);
+    acc[key].revenue+=Number(item.unit_price||0)*Number(item.quantity||0);
+    return acc;
+  },{})).sort((a,b)=>b.revenue-a.revenue).slice(0,8);
+  const analyticsCategoryRows = Object.values(analyticsDelivered.flatMap(order=>order.order_items||[]).reduce((acc:Record<string,{name:string;units:number;revenue:number}>,item)=>{
+    const product=products.find(p=>p.id===item.product_id);
+    const key=product?.categories?.name||'Category unavailable';
+    if(!acc[key]) acc[key]={name:key,units:0,revenue:0};
+    acc[key].units+=Number(item.quantity||0);
+    acc[key].revenue+=Number(item.unit_price||0)*Number(item.quantity||0);
+    return acc;
+  },{})).sort((a,b)=>b.revenue-a.revenue);
+  const exportAnalyticsCsv = () => {
+    const quote=(value:unknown)=>'"'+String(value??'').replace(/"/g,'""')+'"';
+    const header=['Order ID','Created At','Status','Subtotal','Discount','Delivery Fee','Total','Items'];
+    const lines=analyticsOrders.map(order=>[order.id,order.created_at,order.status,order.subtotal_amount??order.total_amount,order.discount_amount||0,order.delivery_fee,order.total_amount,(order.order_items||[]).map(item=>item.product_name+' x '+item.quantity).join('; ')].map(quote).join(','));
+    const csv='\uFEFF'+[header.map(quote).join(','),...lines].join('\r\n');
+    const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+    const link=document.createElement('a');link.href=url;link.download='puash-analytics-'+analyticsRange+'-days-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+    setMessage(analyticsOrders.length+' analytics orders CSV mein export hue.');
+  };
+
+
 
   if (!sessionReady) return <div className="admin-screen"><div className="admin-loading">PUASH Admin load ho raha hai…</div></div>;
 
@@ -421,8 +468,8 @@ export default function Admin() {
   return <div className="admin-screen">
     <header className="admin-header"><a href="/" className="admin-brand"><span>PUASH.</span><small>ADMIN</small></a><button className="admin-logout" onClick={()=>supabase.auth.signOut()}><LogOut size={16}/> Sign out</button></header>
     <main className="admin-main">
-      <div className="admin-title-row"><div><div className="admin-kicker">STORE CONTROL</div><h1>{activeTab === 'sales' ? 'Sales dashboard' : activeTab === 'products' ? 'Products' : activeTab === 'inventory' ? 'Inventory management' : activeTab === 'activity' ? 'Admin activity logs' : activeTab === 'coupons' ? 'Coupons & discounts' : activeTab === 'returns' ? 'Returns' : activeTab === 'customers' ? 'Customers' : 'Orders'}</h1><p>{activeTab === 'sales' ? 'Your store performance at a glance.' : activeTab === 'products' ? 'Add, edit and publish products on your PUASH store.' : activeTab === 'inventory' ? 'Track stock levels and review every recorded stock movement.' : activeTab === 'activity' ? 'Review important changes made by store administrators.' : activeTab === 'coupons' ? 'Create and manage customer discount codes.' : activeTab === 'returns' ? 'Review and manage customer return requests.' : activeTab === 'customers' ? 'View customer accounts and order history.' : 'Review customer orders and update their fulfilment status.'}</p></div><button className="admin-refresh" onClick={() => { loadData(); loadOrders(); }}><RefreshCw size={16}/> Refresh</button></div>
-      <nav className="admin-tabs"><button className={activeTab === 'sales' ? 'active' : ''} onClick={() => setActiveTab('sales')}><BarChart3 size={16}/> Dashboard</button><button className={activeTab === 'products' ? 'active' : ''} onClick={() => setActiveTab('products')}><Package size={16}/> Products <span>{products.length}</span></button><button className={activeTab === 'orders' ? 'active' : ''} onClick={() => setActiveTab('orders')}><ClipboardList size={16}/> Orders <span>{genuineOrders.length}</span></button><button className={activeTab === 'customers' ? 'active' : ''} onClick={() => { setActiveTab('customers'); loadCustomers(); }}><Users size={16}/> Customers <span>{customers.length}</span></button><button className={activeTab === 'returns' ? 'active' : ''} onClick={() => { setActiveTab('returns'); loadReturnRequests(); }}><RefreshCw size={16}/> Returns <span>{returnRequests.filter(item=>item.status==='pending').length}</span></button><button className={activeTab === 'coupons' ? 'active' : ''} onClick={() => { setActiveTab('coupons'); loadCoupons(); }}><Save size={16}/> Coupons <span>{coupons.filter(c=>c.is_active).length}</span></button><button className={activeTab === 'inventory' ? 'active' : ''} onClick={() => { setActiveTab('inventory'); loadStockMovements(); }}><ClipboardList size={16}/> Inventory <span>{products.filter(p=>p.is_active && p.stock_quantity<=5).length}</span></button><button className={activeTab === 'activity' ? 'active' : ''} onClick={() => { setActiveTab('activity'); loadActivityLogs(); }}><Activity size={16}/> Activity <span>{activityLogs.length}</span></button></nav>
+      <div className="admin-title-row"><div><div className="admin-kicker">STORE CONTROL</div><h1>{activeTab === 'sales' ? 'Sales dashboard' : activeTab === 'analytics' ? 'Advanced analytics' : activeTab === 'products' ? 'Products' : activeTab === 'inventory' ? 'Inventory management' : activeTab === 'activity' ? 'Admin activity logs' : activeTab === 'coupons' ? 'Coupons & discounts' : activeTab === 'returns' ? 'Returns' : activeTab === 'customers' ? 'Customers' : 'Orders'}</h1><p>{activeTab === 'sales' ? 'Your store performance at a glance.' : activeTab === 'analytics' ? 'Date-wise revenue, order trends and product performance.' : activeTab === 'products' ? 'Add, edit and publish products on your PUASH store.' : activeTab === 'inventory' ? 'Track stock levels and review every recorded stock movement.' : activeTab === 'activity' ? 'Review important changes made by store administrators.' : activeTab === 'coupons' ? 'Create and manage customer discount codes.' : activeTab === 'returns' ? 'Review and manage customer return requests.' : activeTab === 'customers' ? 'View customer accounts and order history.' : 'Review customer orders and update their fulfilment status.'}</p></div><button className="admin-refresh" onClick={() => { loadData(); loadOrders(); }}><RefreshCw size={16}/> Refresh</button></div>
+      <nav className="admin-tabs"><button className={activeTab === 'sales' ? 'active' : ''} onClick={() => setActiveTab('sales')}><BarChart3 size={16}/> Dashboard</button><button className={activeTab === 'analytics' ? 'active' : ''} onClick={() => setActiveTab('analytics')}><TrendingUp size={16}/> Analytics</button><button className={activeTab === 'products' ? 'active' : ''} onClick={() => setActiveTab('products')}><Package size={16}/> Products <span>{products.length}</span></button><button className={activeTab === 'orders' ? 'active' : ''} onClick={() => setActiveTab('orders')}><ClipboardList size={16}/> Orders <span>{genuineOrders.length}</span></button><button className={activeTab === 'customers' ? 'active' : ''} onClick={() => { setActiveTab('customers'); loadCustomers(); }}><Users size={16}/> Customers <span>{customers.length}</span></button><button className={activeTab === 'returns' ? 'active' : ''} onClick={() => { setActiveTab('returns'); loadReturnRequests(); }}><RefreshCw size={16}/> Returns <span>{returnRequests.filter(item=>item.status==='pending').length}</span></button><button className={activeTab === 'coupons' ? 'active' : ''} onClick={() => { setActiveTab('coupons'); loadCoupons(); }}><Save size={16}/> Coupons <span>{coupons.filter(c=>c.is_active).length}</span></button><button className={activeTab === 'inventory' ? 'active' : ''} onClick={() => { setActiveTab('inventory'); loadStockMovements(); }}><ClipboardList size={16}/> Inventory <span>{products.filter(p=>p.is_active && p.stock_quantity<=5).length}</span></button><button className={activeTab === 'activity' ? 'active' : ''} onClick={() => { setActiveTab('activity'); loadActivityLogs(); }}><Activity size={16}/> Activity <span>{activityLogs.length}</span></button></nav>
       {message && <div className="admin-message">{message}<button onClick={()=>setMessage('')}><X size={14}/></button></div>}
       {activeTab === 'sales' ? <section className="admin-sales-dashboard">
         <div className="admin-sales-note">Figures exclude internal test orders. Sales total below counts delivered orders only.</div>
@@ -458,6 +505,31 @@ export default function Admin() {
             {lowStockProducts.length>8 && <p className="admin-sales-footnote">Aur {lowStockProducts.length-8} products low stock mein hain. Products tab mein full list dekhein.</p>}
           </section>
         </div>
+      </section> : activeTab === 'analytics' ? <section className="admin-analytics">
+        <div className="admin-panel">
+          <div className="admin-panel-heading"><div><span className="admin-panel-icon"><TrendingUp size={17}/></span><strong>Performance report</strong></div><button className="admin-link" onClick={exportAnalyticsCsv}><Download size={14}/> Export report CSV</button></div>
+          <div className="analytics-controls"><label>Report period<select value={analyticsRange} onChange={e=>setAnalyticsRange(e.target.value as '7'|'30'|'90'|'365')}><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last 365 days</option></select></label><span>{analyticsStart.toLocaleDateString('en-IN')} – {analyticsEnd.toLocaleDateString('en-IN')}</span></div>
+          <p className="admin-shipping-help">Revenue sirf delivered orders se calculate hoti hai. Comparison pichhle same-length period ke saath hai. Orders ki date creation date par based hai.</p>
+          <div className="analytics-metrics">
+            <article><small>Delivered revenue</small><strong>{money(analyticsRevenue)}</strong><span className={percentChange(analyticsRevenue,previousRevenue)>=0?'analytics-up':'analytics-down'}>{percentChange(analyticsRevenue,previousRevenue)>=0?'+':''}{percentChange(analyticsRevenue,previousRevenue).toFixed(1)}% vs previous</span></article>
+            <article><small>Delivered orders</small><strong>{analyticsDelivered.length}</strong><span>{previousDelivered.length} previous period</span></article>
+            <article><small>Average order value</small><strong>{money(analyticsAov)}</strong><span className={percentChange(analyticsAov,previousAov)>=0?'analytics-up':'analytics-down'}>{percentChange(analyticsAov,previousAov)>=0?'+':''}{percentChange(analyticsAov,previousAov).toFixed(1)}% vs previous</span></article>
+            <article><small>Units ordered</small><strong>{analyticsUnits}</strong><span>{analyticsOrders.length} total orders in period</span></article>
+          </div>
+          <div className="analytics-secondary"><div><small>Cancellation rate</small><strong>{analyticsCancellationRate.toFixed(1)}%</strong><span>{analyticsCancelled} cancelled orders</span></div><div><small>Non-delivered orders</small><strong>{analyticsOrders.filter(o=>o.status!=='delivered'&&o.status!=='cancelled').length}</strong><span>Pending, confirmed, processing or shipped</span></div></div>
+        </div>
+        <div className="analytics-columns">
+          <section className="admin-panel"><div className="admin-panel-heading"><div><span className="admin-panel-icon"><Package size={17}/></span><strong>Top products by revenue</strong></div></div>
+            {analyticsProductRows.length===0?<div className="admin-empty">Is period mein delivered sales data nahi hai.</div>:<div className="analytics-ranking">{analyticsProductRows.map((item,index)=><div key={item.name}><span>{index+1}</span><div><strong>{item.name}</strong><small>{item.units} units sold</small></div><b>{money(item.revenue)}</b></div>)}</div>}
+          </section>
+          <section className="admin-panel"><div className="admin-panel-heading"><div><span className="admin-panel-icon"><BarChart3 size={17}/></span><strong>Category performance</strong></div></div>
+            {analyticsCategoryRows.length===0?<div className="admin-empty">Category sales abhi available nahi hain.</div>:<div className="analytics-ranking">{analyticsCategoryRows.map((item,index)=><div key={item.name}><span>{index+1}</span><div><strong>{item.name}</strong><small>{item.units} units sold</small></div><b>{money(item.revenue)}</b></div>)}</div>}
+            <p className="admin-sales-footnote">Category current product catalogue se identify hoti hai. Deleted ya re-categorised products ki historical category unavailable ho sakti hai.</p>
+          </section>
+        </div>
+        <section className="admin-panel"><div className="admin-panel-heading"><div><span className="admin-panel-icon"><ClipboardList size={17}/></span><strong>Order status breakdown</strong></div></div>
+          <div className="analytics-status">{['pending','confirmed','processing','shipped','delivered','cancelled'].map(status=><div key={status}><span>{status.charAt(0).toUpperCase()+status.slice(1)}</span><strong>{analyticsOrders.filter(o=>o.status===status).length}</strong></div>)}</div>
+        </section>
       </section> : activeTab === 'products' ? <>
 <section className="admin-panel">
         <div className="admin-panel-heading"><div><span className="admin-panel-icon"><Package size={17}/></span><strong>{editing ? 'Edit product' : 'Add a product'}</strong></div>{editing && <button className="admin-link" onClick={resetForm}>Cancel edit</button>}</div>
