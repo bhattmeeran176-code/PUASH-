@@ -193,8 +193,8 @@ export default function ProductDetail() {
       let tag = document.querySelector(selector) as HTMLMetaElement | null;
       if (!tag) {
         tag = document.createElement('meta');
-        if (selector.includes('og:')) tag.setAttribute('property', selector.match(/\[property="([^"]+)"\\]/)?.[1] || '');
-        else tag.setAttribute('name', selector.match(/\[name="([^"]+)"\\]/)?.[1] || '');
+        if (selector.includes('og:')) tag.setAttribute('property', selector.includes('og:title') ? 'og:title' : selector.includes('og:description') ? 'og:description' : 'og:image');
+        else tag.setAttribute('name', 'description');
         document.head.appendChild(tag);
       }
       tag.setAttribute(attribute, value);
