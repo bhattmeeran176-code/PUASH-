@@ -23,6 +23,7 @@ type CustomerOrder = {
 
 type CustomerSellerFulfillment = {order_id:string;shop_name:string;fulfillment_status:string;seller_subtotal:number;updated_at:string};
 type CustomerRefundStatus = {order_id:string;shop_name:string;status:string;refund_amount:number|null;created_at:string;processed_at:string|null};
+type CustomerCancellationRequest = {id:string;order_id:string;reason:string;details:string|null;status:string;admin_note:string|null;requested_at:string;reviewed_at:string|null};
 
 type Address = {
   id: string;
@@ -63,6 +64,9 @@ export default function Account() {
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [sellerFulfillments,setSellerFulfillments]=useState<CustomerSellerFulfillment[]>([]);
   const [refundStatuses,setRefundStatuses]=useState<CustomerRefundStatus[]>([]);
+  const [cancellationRequests,setCancellationRequests]=useState<CustomerCancellationRequest[]>([]);
+  const [cancellationDrafts,setCancellationDrafts]=useState<Record<string,{reason:string;details:string}>>({});
+  const [cancellationBusy,setCancellationBusy]=useState<string|null>(null);
   const ordersRef = useRef<CustomerOrder[]>([]);
   const [ordersBusy, setOrdersBusy] = useState(false);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
@@ -126,6 +130,7 @@ export default function Account() {
       ordersRef.current = (orderData || []) as CustomerOrder[];
       setOrders(ordersRef.current);
       const orderIds=ordersRef.current.map(order=>order.id);
+      const {data:cancellationData,error:cancellationError}=await supabase.from('order_cancellation_requests').select('id,order_id,reason,details,status,admin_note,requested_at,reviewed_at').in('order_id',orderIds.length?orderIds:['00000000-0000-0000-0000-000000000000']).order('requested_at',{ascending:false});if(cancellationError)setError('Cancellation requests load nahi hui: '+cancellationError.message);else setCancellationRequests((cancellationData||[]) as CustomerCancellationRequest[]);
       if(orderIds.length){const [{data:fulfillmentData,error:fulfillmentError},{data:refundData,error:refundError}]=await Promise.all([supabase.rpc('customer_order_fulfillments',{p_order_ids:orderIds}),supabase.rpc('customer_order_refund_statuses',{p_order_ids:orderIds})]);if(fulfillmentError)setError('Seller delivery updates load nahi huye: '+fulfillmentError.message);else setSellerFulfillments((fulfillmentData||[]) as CustomerSellerFulfillment[]);if(refundError)setError('Refund updates load nahi huye: '+refundError.message);else setRefundStatuses((refundData||[]) as CustomerRefundStatus[]);}else {setSellerFulfillments([]);setRefundStatuses([]);}
     } else {
       setAddresses([]);
@@ -135,6 +140,7 @@ export default function Account() {
       setOrders([]);
       setSellerFulfillments([]);
       setRefundStatuses([]);
+      setCancellationRequests([]);
     }
     setReady(true);
   };
@@ -209,6 +215,16 @@ export default function Account() {
       }).subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [user?.id]);
+
+  const submitCancellationRequest = async (order: CustomerOrder) => {
+    if (!user || !['pending','confirmed','processing'].includes(order.status) || cancellationRequests.some(item=>item.order_id===order.id)) return;
+    const draft=cancellationDrafts[order.id]||{reason:'changed_mind',details:''};
+    setCancellationBusy(order.id);setError('');setMessage('');
+    const {data,error:requestError}=await supabase.from('order_cancellation_requests').insert({order_id:order.id,user_id:user.id,reason:draft.reason,details:draft.details.trim()||null}).select('id,order_id,reason,details,status,admin_note,requested_at,reviewed_at').single();
+    setCancellationBusy(null);
+    if(requestError)setError('Cancellation request submit nahi hui: '+requestError.message);
+    else {setCancellationRequests(items=>[data as CustomerCancellationRequest,...items]);setMessage('Cancellation request submit ho gayi. PUASH team review karegi.');}
+  };
 
   const submitReturnRequest = async (order: CustomerOrder) => {
     if (!user || order.status !== 'delivered' || order.order_return_requests?.length) return;
@@ -434,6 +450,7 @@ export default function Account() {
                 {refundStatuses.filter(item=>item.order_id===order.id).length>0&&<section className="customer-seller-tracking customer-refund-status"><strong>Refund updates</strong>{refundStatuses.filter(item=>item.order_id===order.id).map((item,index)=><div className="customer-seller-tracking-row" key={item.order_id+'-refund-'+index}><div><b>{item.shop_name}</b><small>{item.refund_amount===null?'Amount under review':'Refund amount · ₹'+Number(item.refund_amount).toLocaleString('en-IN')}{item.processed_at?' · Updated '+new Date(item.processed_at).toLocaleDateString('en-IN'):''}</small></div><span className={'customer-order-status status-'+item.status}>{item.status.replace(/_/g,' ')}</span></div>)}</section>}{sellerFulfillments.filter(item=>item.order_id===order.id).length>0&&<section className="customer-seller-tracking"><strong><Package size={15}/> Seller-wise fulfilment</strong>{sellerFulfillments.filter(item=>item.order_id===order.id).map(item=><div className="customer-seller-tracking-row" key={item.order_id+'-'+item.shop_name}><div><b>{item.shop_name}</b><small>Seller item subtotal · ₹{Number(item.seller_subtotal).toLocaleString('en-IN')}</small></div><span className={'customer-order-status status-'+item.fulfillment_status}>{item.fulfillment_status.replace(/_/g,' ')}</span></div>)}</section>}
                 <div className="customer-order-lines">{(order.order_items||[]).map(item=><div key={item.id}><span>{item.product_name} × {item.quantity}</span><b>₹{(Number(item.unit_price)*item.quantity).toLocaleString('en-IN')}</b></div>)}</div>
                 <div className="customer-order-total"><span>Total · {order.payment_method==='cash_on_delivery'?'Cash on Delivery':order.payment_method}</span><strong>₹{Number(order.total_amount).toLocaleString('en-IN')}</strong></div>
+                {['pending','confirmed','processing'].includes(order.status)&&<div className="customer-return-panel customer-cancel-panel"><strong>Cancel order request</strong>{cancellationRequests.filter(item=>item.order_id===order.id).length>0?(()=>{const request=cancellationRequests.find(item=>item.order_id===order.id)!;return <div className="customer-return-status"><span>Request status: <b>{request.status.replace(/_/g,' ')}</b></span><small>{request.admin_note||'PUASH team is reviewing your request.'}</small></div>;})():<><p>Cancellation request PUASH team approve karegi. Order abhi cancel nahi hoga.</p><select value={cancellationDrafts[order.id]?.reason||'changed_mind'} onChange={e=>setCancellationDrafts(prev=>({...prev,[order.id]:{reason:e.target.value,details:prev[order.id]?.details||''}}))}><option value="changed_mind">Changed my mind</option><option value="ordered_by_mistake">Ordered by mistake</option><option value="delivery_too_late">Delivery taking too long</option><option value="other">Other reason</option></select><textarea maxLength={1000} value={cancellationDrafts[order.id]?.details||''} onChange={e=>setCancellationDrafts(prev=>({...prev,[order.id]:{reason:prev[order.id]?.reason||'changed_mind',details:e.target.value}}))} placeholder="Additional details (optional)"/><button type="button" disabled={cancellationBusy===order.id} onClick={()=>submitCancellationRequest(order)}>{cancellationBusy===order.id?'Submitting…':'Request cancellation'}</button></>}</div>}
                 {order.status==='cancelled' ? <p className="customer-order-cancelled">This order was cancelled.</p> : <div className="customer-order-progress">{steps.map((step,index)=><div className={current>=index?'done':''} key={step}><span></span><small>{labels[step]}</small></div>)}</div>}
                 {order.courier_name || order.tracking_number ? <div className="customer-shipping-info">
                   <strong><Package size={15}/> Shipping information</strong>
