@@ -22,6 +22,7 @@ export default function ProductDetail() {
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [selectedVariantId, setSelectedVariantId] = useState('');
   const [activeImage, setActiveImage] = useState(0);
+  const [imageFailed, setImageFailed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [message, setMessage] = useState('');
@@ -38,6 +39,8 @@ export default function ProductDetail() {
   const [reviewError, setReviewError] = useState('');
   const [wishlistSaved, setWishlistSaved] = useState(false);
   const [wishlistBusy, setWishlistBusy] = useState(false);
+
+  useEffect(() => { setImageFailed(false); }, [activeImage]);
 
   const loadReviews = async () => {
     setReviewsLoading(true);
@@ -182,13 +185,21 @@ export default function ProductDetail() {
         <button className="detail-cart-link" onClick={() => { window.location.href = '/'; }}>Continue shopping</button>
       </header>
       <main className="detail-main">
-        {loading ? <div className="detail-state">Product details load ho rahi hain…</div> :
+        {loading ? <div className="detail-layout detail-loading-layout" aria-label="Loading product details" aria-busy="true">
+          <div className="detail-gallery detail-gallery-skeleton"><span /></div>
+          <section className="detail-information detail-information-skeleton">
+            <span className="detail-skeleton-line short" /><span className="detail-skeleton-line heading" />
+            <span className="detail-skeleton-line medium" /><span className="detail-skeleton-line price" />
+            <span className="detail-skeleton-panel" /><span className="detail-skeleton-line medium" />
+            <span className="detail-skeleton-panel large" />
+          </section>
+        </div> :
         !product ? <div className="detail-state"><h2>Product nahi mila</h2><p>Ye product available nahi hai ya publish nahi hua.</p><button className="primary-button" onClick={() => { window.location.href = '/'; }}>Store par wapas</button></div> :
         <>
           <article className="detail-layout">
             <div className="detail-gallery">
-              {galleryImages.length ? <>
-                <img src={galleryImages[activeImage] || galleryImages[0]} alt={product.name + ' – image ' + (activeImage + 1)} />
+              {galleryImages.length && !imageFailed ? <>
+                <img src={galleryImages[activeImage] || galleryImages[0]} alt={product.name + ' – image ' + (activeImage + 1)} onError={() => setImageFailed(true)} />
                 {galleryImages.length > 1 && <div className="detail-gallery-thumbs" aria-label="Product images">{galleryImages.map((url, index) => <button type="button" key={url} className={activeImage === index ? 'active' : ''} onClick={() => setActiveImage(index)} aria-label={'Show product image ' + (index + 1)}><img src={url} alt="" /></button>)}</div>}
               </> : <div className="detail-image-placeholder">🛍️</div>}
             </div>
