@@ -158,8 +158,6 @@ function App() {
   };
 
   useEffect(() => {
-    let cancelled = false;
-    supabase.from('delivery_zones').select('district,delivery_fee,free_delivery_threshold,min_delivery_days,max_delivery_days,is_serviceable').eq('is_serviceable', true).order('district').then(({data,error}) => { if (!cancelled && !error) setDeliveryZones(data || []); });
     async function loadStoreData() {
       const [productResult, categoryResult, reviewResult, variantResult] = await Promise.all([
         supabase
