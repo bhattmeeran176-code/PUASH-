@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase';
+import PhoneLinkCard from './PhoneLinkCard';
 import { ArrowLeft, Bell, CheckCircle2, LogOut, MapPin, Plus, ShieldCheck, Trash2, UserRound, X, Package, RefreshCw, ChevronDown, ChevronUp, Heart } from 'lucide-react';
 
 type CustomerOrder = {
@@ -412,6 +413,7 @@ export default function Account() {
         <h1>My account.</h1>
         <p>Apni profile aur delivery addresses yahan manage karein.</p>
         <div className="account-email"><small>Signed in as</small><strong>{user.email || user.phone || 'Phone account'}</strong></div>
+        <PhoneLinkCard user={user} />
         <section className="account-notifications">
           <div className="address-book-heading">
             <div><Bell size={18}/><strong>Notifications</strong><span className="customer-order-count">{notifications.filter(item => !item.is_read).length}</span></div>
