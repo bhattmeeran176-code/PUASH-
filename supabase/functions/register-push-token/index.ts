@@ -33,7 +33,7 @@ Deno.serve(async (request: Request) => {
     return Response.json({ error: 'Invalid session' }, { status: 401, headers: corsHeaders });
   }
 
-  let body: { token?: unknown; platform?: unknown };
+  let body: { token?: unknown; platform?: unknown; action?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -42,21 +42,23 @@ Deno.serve(async (request: Request) => {
 
   const token = typeof body.token === 'string' ? body.token.trim() : '';
   const platform = body.platform;
-  if (token.length < 20 || token.length > 4096 || !['android', 'ios'].includes(String(platform))) {
+  const action = body.action === 'delete' ? 'delete' : 'register';
+  if (token.length < 20 || token.length > 4096 || (action === 'register' && !['android', 'ios'].includes(String(platform)))) {
     return Response.json({ error: 'Invalid push token or platform' }, { status: 400, headers: corsHeaders });
   }
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const { error: saveError } = await adminClient
-    .from('push_device_tokens')
-    .upsert({
-      user_id: user.id,
-      token,
-      platform,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'token' });
+  const tokenQuery = adminClient.from('push_device_tokens');
+  const { error: saveError } = action === 'delete'
+    ? await tokenQuery.delete().eq('token', token).eq('user_id', user.id)
+    : await tokenQuery.upsert({
+        user_id: user.id,
+        token,
+        platform,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'token' });
 
   if (saveError) {
     console.error('Push token save failed:', saveError.message);
