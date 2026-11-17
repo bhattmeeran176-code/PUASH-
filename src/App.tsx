@@ -564,23 +564,6 @@ function App() {
             )}
           </label>
         </div>
-        <nav className="category-nav" aria-label="Product categories">
-          {categories.map(item => (
-            <button
-              key={item.name}
-              className={
-                category === item.name ? 'nav-category active' : 'nav-category'
-              }
-              onClick={() => {
-                setCategory(item.name);
-                setSearch('');
-              }}
-            >
-              <span>{item.emoji}</span>
-              {item.name === 'All' ? 'All products' : item.name}
-            </button>
-          ))}
-        </nav>
       </header>
 
       <main>
@@ -663,20 +646,6 @@ function App() {
                 <option value="rating">Top rated</option>
               </select>
             </label>
-          </div>
-          <div className="category-chips market-filter-chips">
-            {categories.map(item => (
-              <button
-                key={item.name}
-                className={category === item.name ? 'chip selected' : 'chip'}
-                onClick={() => {
-                  setCategory(item.name);
-                  setSearch('');
-                }}
-              >
-                {item.emoji} {item.name}
-              </button>
-            ))}
           </div>
           <div className="market-filter-row">
             <button type="button" className={filtersOpen ? 'market-filter-toggle is-open' : 'market-filter-toggle'} onClick={() => setFiltersOpen(value => !value)} aria-expanded={filtersOpen}>
