@@ -80,9 +80,10 @@ export default function Account() {
   const [notificationsBusy, setNotificationsBusy] = useState(false);
   const [notificationSoundEnabled, setNotificationSoundEnabled] = useState(() => { try { return localStorage.getItem('puash-notification-sound') !== 'off'; } catch { return true; } });
   const notificationAudioRef = useRef<AudioContext | null>(null);
+  const notificationSoundEnabledRef = useRef(notificationSoundEnabled);
 
   const playNotificationSound = (force = false) => {
-    if (!force && !notificationSoundEnabled) return;
+    if (!force && !notificationSoundEnabledRef.current) return;
     try {
       const AudioContextClass = window.AudioContext;
       if (!AudioContextClass) return;
@@ -105,6 +106,7 @@ export default function Account() {
   const toggleNotificationSound = () => {
     const next = !notificationSoundEnabled;
     setNotificationSoundEnabled(next);
+    notificationSoundEnabledRef.current = next;
     try { localStorage.setItem('puash-notification-sound', next ? 'on' : 'off'); } catch { /* Ignore unavailable storage. */ }
     if (next) playNotificationSound(true);
   };
