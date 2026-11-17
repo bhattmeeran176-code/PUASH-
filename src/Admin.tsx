@@ -1,3 +1,4 @@
+import { quoteCsvCell } from './utils/csv.js';
 import { FormEvent, useEffect, useState } from 'react';
 import { supabase } from './supabase';
 import { ArrowLeft, BarChart3, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X, AlertTriangle, TrendingUp, Users, UserRound, ChevronDown, ChevronUp, Download, Activity, Truck } from 'lucide-react';
@@ -166,15 +167,7 @@ export default function Admin() {
       const haystack = [order.id, address.full_name, address.phone, address.postal_code, address.city].join(' ').toLowerCase();
       return (orderStatusFilter === 'all' || order.status === orderStatusFilter) && haystack.includes(orderSearch.trim().toLowerCase());
     });
-    const quote = (value: unknown) => {
-      const raw = String(value ?? '');
-      // Spreadsheet apps may execute cells beginning with formula characters.
-      // Prefix untrusted text with an apostrophe before CSV quoting.
-      const safe = typeof value === 'string' && /^[\u0000-\u0020]*[=+\-@]/.test(raw)
-        ? "'" + raw
-        : raw;
-      return '"' + safe.replace(/"/g, '""') + '"';
-    };
+    const quote = quoteCsvCell;
     const header = ['Order ID','Date','Status','Subtotal','Delivery Fee','Coupon','Discount','Total','Payment Method','Items'];
     const lines = rows.map(order => [
       order.id,
