@@ -1,7 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap');
 
 :root {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Manrope', sans-serif;
   color: #25231f;
   background: #faf9f6;
   font-synthesis: none;
@@ -2600,4 +2600,73 @@ main { max-width:1280px; }
 @media(prefers-reduced-motion:reduce) {
  .detail-gallery-skeleton,.detail-skeleton-line,.detail-skeleton-panel { animation:none; background:#eeeae2; }
  .detail-gallery > img,.detail-gallery-thumbs button { transition:none; }
+}
+
+
+/* PUASH delivery hero illustration and refined typography */
+.delivery-art { isolation:isolate; min-height:350px; }
+.delivery-halo {
+  position:absolute; width:min(78%,390px); aspect-ratio:1; border-radius:50%;
+  background:radial-gradient(circle at 50% 48%,rgba(255,253,247,.96) 0%,rgba(217,181,142,.24) 54%,rgba(217,181,142,0) 72%);
+  animation:delivery-halo-pulse 5s ease-in-out infinite;
+}
+.delivery-route {
+  position:absolute; width:76%; height:65%; bottom:10%; border:1px dashed rgba(49,91,72,.22);
+  border-left-color:transparent; border-top-color:transparent; border-radius:50%;
+  transform:rotate(-13deg);
+}
+.delivery-scene { position:relative; z-index:1; width:min(100%,560px); overflow:visible; filter:drop-shadow(0 18px 18px rgba(40,54,42,.08)); }
+.delivery-scooter { transform-origin:50% 85%; animation:delivery-ride 3.8s ease-in-out infinite; }
+.delivery-parcel { transform-origin:50% 100%; animation:delivery-parcel-bob 1.9s ease-in-out infinite; }
+.delivery-cloud { position:absolute; z-index:0; }
+.cloud-a { top:17%; left:16%; animation:delivery-cloud-drift 7s ease-in-out infinite; }
+.cloud-b { top:26%; right:13%; transform:scale(.7); animation:delivery-cloud-drift 9s ease-in-out infinite reverse; }
+.delivery-badge {
+  position:absolute; z-index:2; top:12%; right:5%; display:grid; grid-template-columns:22px auto;
+  align-items:center; column-gap:7px; padding:12px 15px; border:1px solid rgba(49,91,72,.08);
+  border-radius:10px; background:rgba(255,254,250,.92); box-shadow:0 12px 28px rgba(46,57,42,.09);
+  animation:delivery-badge-float 4s ease-in-out infinite;
+}
+.delivery-badge span { grid-row:span 2; color:#c66a48; font-size:20px; }
+.delivery-badge strong { color:#244b3a; font-size:11px; font-weight:800; }
+.delivery-badge small { color:#77736b; font-size:9px; }
+.delivery-sparkles { animation:delivery-sparkle 2.6s ease-in-out infinite; transform-origin:center; }
+.hero h1,.section-heading h2,.home-shelf-heading h2 { text-wrap:balance; }
+.hero h1 { font-weight:700; }
+button,input,select { font-family:'Manrope',sans-serif; }
+@keyframes delivery-ride {
+  0%,100% { transform:translateY(0) translateX(-3px) rotate(-.4deg); }
+  50% { transform:translateY(-7px) translateX(5px) rotate(.4deg); }
+}
+@keyframes delivery-parcel-bob {
+  0%,100% { transform:rotate(0); }
+  50% { transform:rotate(1.8deg) translateY(-2px); }
+}
+@keyframes delivery-halo-pulse {
+  0%,100% { transform:scale(.96); opacity:.8; }
+  50% { transform:scale(1.04); opacity:1; }
+}
+@keyframes delivery-badge-float {
+  0%,100% { transform:translateY(0) rotate(1deg); }
+  50% { transform:translateY(-7px) rotate(-1deg); }
+}
+@keyframes delivery-cloud-drift {
+  0%,100% { translate:0 0; }
+  50% { translate:12px -5px; }
+}
+@keyframes delivery-sparkle {
+  0%,100% { opacity:.55; transform:scale(.9); }
+  50% { opacity:1; transform:scale(1.12); }
+}
+@media(max-width:760px) {
+  .delivery-art { min-height:245px; margin-top:-8px; }
+  .delivery-scene { width:100%; max-width:460px; }
+  .delivery-badge { top:2%; right:0; padding:9px 11px; }
+  .delivery-badge strong { font-size:10px; }
+  .delivery-badge small { font-size:8px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .delivery-art *, .delivery-art::before, .delivery-art::after {
+    animation:none !important; transition:none !important;
+  }
 }
