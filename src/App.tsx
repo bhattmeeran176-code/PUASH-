@@ -598,39 +598,54 @@ function App() {
             </div>
           </div>
           <div
-            className="hero-art"
-            aria-label="Animated PUASH Kashmir-inspired shopping illustration"
+            className="hero-art delivery-art"
+            aria-label="Animated illustration of a PUASH delivery rider on a scooter"
           >
-            <div className="hero-glow" />
-            <div className="hero-orbit orbit-one" />
-            <div className="hero-orbit orbit-two" />
-            <div className="hero-sun" />
-            <div className="hero-mountain mountain-back" />
-            <div className="hero-mountain mountain-front" />
-            <div className="hero-bag">
-              <span className="bag-handle" />
-              <svg viewBox="0 0 100 100" aria-hidden="true">
-                <path d="M18 38h64l-5 48H23l-5-48Z" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round"/>
-                <path d="M34 39v-8a16 16 0 0 1 32 0v8" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"/>
-                <path d="m32 62 10 9 25-25" fill="none" stroke="#D9B58E" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <span>PUASH</span>
-              <small>MADE FOR EVERYDAY</small>
-            </div>
-            <div className="floating-card card-one">
-              <span>✦</span>
-              <strong>Everyday</strong>
-              <small>favourites</small>
-            </div>
-            <div className="floating-card card-two">
-              <span>♡</span>
-              <strong>Picked</strong>
-              <small>with care</small>
-            </div>
-            <div className="hero-flower">✿</div>
-            <span className="hero-spark spark-one">✦</span>
-            <span className="hero-spark spark-two">✧</span>
-            <span className="hero-spark spark-three">✦</span>
+            <div className="delivery-halo" />
+            <div className="delivery-route" />
+            <div className="delivery-badge"><span>✦</span><strong>On the way</strong><small>Every order, with care</small></div>
+            <svg className="delivery-scene" viewBox="0 0 560 360" role="img" aria-label="A delivery rider carrying a parcel on a green scooter">
+              <ellipse cx="285" cy="316" rx="205" ry="17" fill="#315b48" opacity=".12" />
+              <path d="M52 295 Q155 279 250 293 T510 291" fill="none" stroke="#d7cbb8" strokeWidth="2" strokeDasharray="5 10" />
+              <g className="delivery-cloud cloud-a"><path d="M0 22c0-9 8-16 18-16 5-9 19-8 23 2 11-2 18 7 17 15H0Z" fill="#fffdf8" opacity=".8"/></g>
+              <g className="delivery-cloud cloud-b"><path d="M0 22c0-9 8-16 18-16 5-9 19-8 23 2 11-2 18 7 17 15H0Z" fill="#fffdf8" opacity=".65"/></g>
+              <g className="delivery-scooter">
+                <circle cx="190" cy="278" r="39" fill="#244b3a"/>
+                <circle cx="190" cy="278" r="22" fill="#f4eadb"/>
+                <circle cx="190" cy="278" r="8" fill="#c9a77e"/>
+                <circle cx="397" cy="278" r="39" fill="#244b3a"/>
+                <circle cx="397" cy="278" r="22" fill="#f4eadb"/>
+                <circle cx="397" cy="278" r="8" fill="#c9a77e"/>
+                <path d="M183 263c10-28 35-48 71-50l73 2c19 1 34 14 38 31l17 28h-45c-12-27-45-37-68-17l-16 18h-70Z" fill="#315b48"/>
+                <path d="M298 214h47l31 48h-47l-31-48Z" fill="#426d55"/>
+                <path d="M344 211h28l25 23-8 10h-38l-13-18Z" fill="#d9b58e"/>
+                <path d="M365 212l17-32 13 2-12 38" fill="none" stroke="#244b3a" strokeWidth="9" strokeLinecap="round"/>
+                <path d="M378 179h30" stroke="#244b3a" strokeWidth="8" strokeLinecap="round"/>
+                <path d="M175 258h-28l-9-14" stroke="#244b3a" strokeWidth="9" strokeLinecap="round"/>
+                <path d="M145 245h-13" stroke="#d9b58e" strokeWidth="8" strokeLinecap="round"/>
+                <path d="M231 207c15-16 43-24 69-18l24 11-16 31-43 5-35-10Z" fill="#d9b58e"/>
+                <path d="M273 219l37 10 19 33-18 8-33-28-26-3Z" fill="#f4eadb"/>
+                <path d="M300 180c-5-23 8-43 30-48 20-4 37 9 39 28l-4 28-25 18-29-8Z" fill="#315b48"/>
+                <path d="M328 134c19-15 44-4 48 16l-4 18-18-6-26-28Z" fill="#244b3a"/>
+                <circle cx="353" cy="160" r="3" fill="#25231f"/>
+                <path d="M359 172q9 5 16-1" fill="none" stroke="#b96f54" strokeWidth="2.5" strokeLinecap="round"/>
+                <path d="M311 188l-30 34-31 1" fill="none" stroke="#315b48" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M281 222l-8 22" stroke="#d9b58e" strokeWidth="8" strokeLinecap="round"/>
+                <path d="M334 192l27 30 18-2" fill="none" stroke="#315b48" strokeWidth="13" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M377 220l10-15" stroke="#d9b58e" strokeWidth="7" strokeLinecap="round"/>
+                <g className="delivery-parcel">
+                  <rect x="174" y="126" width="92" height="76" rx="10" fill="#e6d2b5"/>
+                  <path d="M220 126v76M174 158h92" stroke="#c5a57e" strokeWidth="4"/>
+                  <path d="M207 145h26" stroke="#315b48" strokeWidth="3" strokeLinecap="round"/>
+                  <path d="M212 154h16" stroke="#315b48" strokeWidth="3" strokeLinecap="round"/>
+                </g>
+              </g>
+              <g className="delivery-sparkles" fill="#c66a48">
+                <path d="M103 132l5 12 12 5-12 5-5 12-5-12-12-5 12-5Z"/>
+                <path d="M453 107l4 9 9 4-9 4-4 9-4-9-9-4 9-4Z"/>
+                <circle cx="468" cy="197" r="4"/>
+              </g>
+            </svg>
           </div>
           <div className="hero-bottom">
             <span>01 / DISCOVER</span>
