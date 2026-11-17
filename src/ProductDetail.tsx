@@ -186,15 +186,15 @@ export default function ProductDetail() {
     const previousOgDescription = document.querySelector('meta[property="og:description"]')?.getAttribute('content') || '';
     const previousOgImage = document.querySelector('meta[property="og:image"]')?.getAttribute('content') || '';
     const pageTitle = product.name + ' | PUASH';
-    const pageDescription = (product.description || 'Discover ' + product.name + ' at PUASH.').replace(/\\s+/g, ' ').slice(0, 155);
+    const pageDescription = (product.description || 'Discover ' + product.name + ' at PUASH.').replace(/\s+/g, ' ').slice(0, 155);
     document.title = pageTitle;
     if (descriptionTag) descriptionTag.setAttribute('content', pageDescription);
     const setMeta = (selector: string, attribute: string, value: string) => {
       let tag = document.querySelector(selector) as HTMLMetaElement | null;
       if (!tag) {
         tag = document.createElement('meta');
-        if (selector.includes('og:')) tag.setAttribute('property', selector.match(/\\[property="([^"]+)"\\]/)?.[1] || '');
-        else tag.setAttribute('name', selector.match(/\\[name="([^"]+)"\\]/)?.[1] || '');
+        if (selector.includes('og:')) tag.setAttribute('property', selector.match(/\[property="([^"]+)"\\]/)?.[1] || '');
+        else tag.setAttribute('name', selector.match(/\[name="([^"]+)"\\]/)?.[1] || '');
         document.head.appendChild(tag);
       }
       tag.setAttribute(attribute, value);
