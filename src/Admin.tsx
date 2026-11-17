@@ -71,6 +71,7 @@ export default function Admin() {
   const [categoryId, setCategoryId] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [imagePreview, setImagePreview] = useState('');
   const [active, setActive] = useState(true);
 
@@ -285,7 +286,7 @@ export default function Admin() {
   const resetForm = () => {
     setEditing(null); setName(''); setDescription(''); setPrice('');
     setComparePrice(''); setStock('1'); setImageUrl(''); setImageFile(null);
-    setActive(true); if (categories[0]) setCategoryId(categories[0].id);
+    setGalleryFiles([]); setActive(true); if (categories[0]) setCategoryId(categories[0].id);
   };
 
   const authenticate = async (event: FormEvent) => {
@@ -320,6 +321,7 @@ export default function Admin() {
     if (comparePrice && (!Number.isFinite(Number(comparePrice)) || Number(comparePrice) < Number(price))) { setMessage('MRP compare price, selling price se zyada ya barabar hona chahiye.'); return; }
     if (!Number.isInteger(Number(stock)) || Number(stock) < 0) { setMessage('Stock quantity 0 ya usse zyada whole number honi chahiye.'); return; }
     if (imageFile && (!['image/jpeg', 'image/png', 'image/webp'].includes(imageFile.type) || imageFile.size > 5 * 1024 * 1024)) { setMessage('Image JPG, PNG ya WebP ho aur 5 MB se chhoti ho.'); return; }
+    if (galleryFiles.length > 8 || galleryFiles.some(file => !['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024)) { setMessage('Gallery mein maximum 8 images add karein. Har image JPG, PNG ya WebP aur 5 MB se chhoti honi chahiye.'); return; }
     setBusy(true); setMessage('');
     let finalImage = imageUrl.trim() || null;
     let uploadedImagePath: string | null = null;
@@ -339,13 +341,27 @@ export default function Admin() {
       category_id: categoryId || null, image_url: finalImage, is_active: active
     };
     const result = editing
-      ? await supabase.from('products').update(payload).eq('id', editing)
-      : await supabase.from('products').insert(payload);
+      ? await supabase.from('products').update(payload).eq('id', editing).select('id').single()
+      : await supabase.from('products').insert(payload).select('id').single();
     setBusy(false);
     if (result.error) {
       if (uploadedImagePath) await supabase.storage.from('product-images').remove([uploadedImagePath]);
       setMessage('Save nahi hua: ' + result.error.message);
       return;
+    }
+    const savedProductId = editing || result.data?.id;
+    if (savedProductId && galleryFiles.length) {
+      const galleryRows: { product_id: string; image_url: string; storage_path: string; alt_text: string; sort_order: number }[] = [];
+      for (let index = 0; index < galleryFiles.length; index++) {
+        const file = galleryFiles[index];
+        const safeName = file.name.toLowerCase().replace(/[^a-z0-9.-]+/g, '-');
+        const path = 'gallery/' + savedProductId + '/' + Date.now() + '-' + crypto.randomUUID().slice(0, 8) + '-' + safeName;
+        const { error: uploadError } = await supabase.storage.from('product-images').upload(path, file, { upsert: false, contentType: file.type });
+        if (uploadError) { setBusy(false); setMessage('Product save ho gaya, lekin gallery upload ruk gaya: ' + uploadError.message); await loadData(); return; }
+        galleryRows.push({ product_id: savedProductId, image_url: supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl, storage_path: path, alt_text: name.trim(), sort_order: index + 1 });
+      }
+      const { error: galleryError } = await supabase.from('product_images').insert(galleryRows);
+      if (galleryError) { setBusy(false); setMessage('Product save ho gaya, lekin gallery record save nahi hua: ' + galleryError.message); await loadData(); return; }
     }
     setMessage(editing ? 'Product update ho gaya.' : 'Product add ho gaya.');
     resetForm(); await loadData();
@@ -355,7 +371,7 @@ export default function Admin() {
     setEditing(p.id); setName(p.name); setDescription(p.description || '');
     setPrice(String(p.price)); setComparePrice(p.compare_at_price ? String(p.compare_at_price) : '');
     setStock(String(p.stock_quantity)); setCategoryId(p.category_id || categories[0]?.id || '');
-    setImageUrl(p.image_url || ''); setImageFile(null); setActive(p.is_active);
+    setImageUrl(p.image_url || ''); setImageFile(null); setGalleryFiles([]); setActive(p.is_active);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -540,7 +556,9 @@ export default function Admin() {
           <label>MRP / Compare price (₹)<input type="number" min="0" step="0.01" value={comparePrice} onChange={e=>setComparePrice(e.target.value)} placeholder="Optional"/></label>
           <label>Stock quantity<input type="number" min="0" step="1" value={stock} onChange={e=>setStock(e.target.value)} required/></label>
           <label className="admin-wide">Description<textarea value={description} onChange={e=>setDescription(e.target.value)} rows={3} placeholder="Product details…"/></label>
-          <label className="admin-wide">Product image<input type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>setImageFile(e.target.files?.[0] || null)}/><small>JPG, PNG or WebP · Maximum 5 MB</small></label>
+          <label className="admin-wide">Main product image<input type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>setImageFile(e.target.files?.[0] || null)}/><small>JPG, PNG or WebP · Maximum 5 MB</small></label>
+           <label className="admin-wide">Additional gallery images<input type="file" accept="image/png,image/jpeg,image/webp" multiple onChange={e=>setGalleryFiles(Array.from(e.target.files || []))}/><small>Up to 8 extra images · Each maximum 5 MB. Existing gallery images are kept when editing.</small></label>
+           {galleryFiles.length > 0 && <p className="admin-help-text">{galleryFiles.length} additional image(s) selected.</p>}
           {(imagePreview || imageUrl) && <div className="admin-image-preview"><img src={imagePreview || imageUrl} alt="Product preview" onError={e=>{e.currentTarget.style.display='none';}}/><span>Image preview</span></div>}
           <label className="admin-wide">Or image URL<input type="url" value={imageUrl} onChange={e=>setImageUrl(e.target.value)} placeholder="https://…"/></label>
           <label className="admin-check"><input type="checkbox" checked={active} onChange={e=>setActive(e.target.checked)}/> Publish product on store</label>
