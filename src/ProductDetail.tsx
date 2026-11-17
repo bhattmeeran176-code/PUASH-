@@ -88,7 +88,7 @@ export default function ProductDetail() {
         ]);
         const liveVariants = (variantRows || []) as ProductVariant[];
         setVariants(liveVariants);
-        setSelectedVariantId(liveVariants[0]?.id || '');
+        setSelectedVariantId(liveVariants.find(item => item.stock_quantity > 0)?.id || liveVariants[0]?.id || '');
         const category = Array.isArray(data.categories) ? data.categories[0]?.name : data.categories?.name;
         const viewedProduct = {
           id: data.id, name: data.name,
@@ -122,7 +122,12 @@ export default function ProductDetail() {
     try {
       const current = JSON.parse(localStorage.getItem('puash-cart') || '{}');
       const cartKey = selectedVariant ? product.id + '::' + selectedVariant.id : product.id;
-      const next = { ...current, [cartKey]: Math.min(availableStock, (Number(current[cartKey]) || 0) + quantity) };
+      const alreadyInCart = Number(current[cartKey]) || 0;
+      if (alreadyInCart + quantity > availableStock) {
+        setMessage('Cart mein pehle se ' + alreadyInCart + ' hain. Available stock ' + availableStock + ' hi hai.');
+        return;
+      }
+      const next = { ...current, [cartKey]: alreadyInCart + quantity };
       localStorage.setItem('puash-cart', JSON.stringify(next));
       setMessage('Cart mein add ho gaya!');
     } catch {
@@ -194,7 +199,7 @@ export default function ProductDetail() {
                 <Heart size={16} fill={wishlistSaved ? 'currentColor' : 'none'}/> {wishlistBusy ? 'Saving…' : wishlistSaved ? 'Saved to wishlist' : 'Save to wishlist'}
               </button>
               <div className="detail-review-summary"><span className="detail-review-stars"><Star size={15} fill="currentColor"/> {averageRating ? averageRating.toFixed(1) : 'New'}</span><span>{reviews.length} {reviews.length===1?'review':'reviews'}</span></div>
-              <div className="detail-prices"><strong>{money(variants.find(item => item.id === selectedVariantId)?.price ?? product.price)}</strong>{product.mrp > product.price && <><del>{money(product.mrp)}</del><span>{Math.round((1-product.price/product.mrp)*100)}% off</span></>}</div>
+              <div className="detail-prices"><strong>{money(variants.find(item => item.id === selectedVariantId)?.price ?? product.price)}</strong>{product.mrp > (variants.find(item => item.id === selectedVariantId)?.price ?? product.price) && <><del>{money(product.mrp)}</del><span>{Math.round((1-(variants.find(item => item.id === selectedVariantId)?.price ?? product.price)/product.mrp)*100)}% off</span></>}</div>
               {variants.length > 0 && <label className="detail-variant-picker"><span>Choose size / colour / option</span><select value={selectedVariantId} onChange={e=>{setSelectedVariantId(e.target.value);setQuantity(1);}}>{variants.map(variant=><option key={variant.id} value={variant.id} disabled={variant.stock_quantity<=0}>{variant.label}{variant.stock_quantity<=0?' · Out of stock':''}</option>)}</select></label>}
               <div className={(variants.length ? (variants.find(item=>item.id===selectedVariantId)?.stock_quantity||0) : product.stock) > 0 ? 'detail-availability' : 'detail-availability out'}><span />{(variants.length ? (variants.find(item=>item.id===selectedVariantId)?.stock_quantity||0) : product.stock) > 0 ? (variants.length ? variants.find(item=>item.id===selectedVariantId)?.stock_quantity : product.stock) + ' pieces available' : 'Currently out of stock'}</div>
               <div className="detail-description"><h2>Product description</h2><p>{product.description}</p></div>
