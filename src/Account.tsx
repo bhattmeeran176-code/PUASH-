@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase';
 import PhoneLinkCard from './PhoneLinkCard';
-import { registerPuashPushNotifications } from './pushNotifications';
+import { registerPuashPushNotifications, unregisterPuashPushNotifications } from './pushNotifications';
 import { ArrowLeft, Bell, CheckCircle2, LogOut, MapPin, Plus, ShieldCheck, Trash2, UserRound, X, Package, RefreshCw, ChevronDown, ChevronUp, Heart, Volume2, VolumeX } from 'lucide-react';
 
 type CustomerOrder = {
@@ -601,7 +601,7 @@ export default function Account() {
               </article>;
             })}
         </section>
-        <button className="account-signout" onClick={()=>supabase.auth.signOut()}><LogOut size={16}/> Sign out</button>
+        <button className="account-signout" onClick={async()=>{await unregisterPuashPushNotifications(user?.id);await supabase.auth.signOut();}}><LogOut size={16}/> Sign out</button>
       </>}
       {message && <div className="account-message"><CheckCircle2 size={16}/>{message}</div>}
       {error && <div className="account-error">{error}</div>}
