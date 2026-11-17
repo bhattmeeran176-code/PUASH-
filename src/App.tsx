@@ -254,7 +254,8 @@ function App() {
     const product = products.find(item => item.id === productId);
     if (!product) return [];
     const variant = variantId ? productVariants.find(item => item.id === variantId && item.product_id === productId) : null;
-    return [{ ...product, cartKey, quantity, variantId: variant?.id || null, variantLabel: variant?.label || null, unitPrice: variant?.price ?? product.price, stock: variant ? variant.stock_quantity : product.stock }];
+    const staleVariant = Boolean(variantId && !variant);
+    return [{ ...product, cartKey, quantity, variantId: variantId || null, variantLabel: staleVariant ? 'Selected option unavailable' : variant?.label || null, unitPrice: variant?.price ?? product.price, stock: staleVariant ? 0 : variant ? variant.stock_quantity : product.stock }];
   });
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cartItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
