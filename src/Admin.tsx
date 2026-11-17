@@ -11,7 +11,7 @@ type StockMovement = { id:string; product_id:string|null; product_name:string; p
 type Coupon = { id:string; code:string; discount_type:'percentage'|'fixed'; discount_value:number; min_order_amount:number; max_discount:number|null; starts_at:string|null; expires_at:string|null; usage_limit:number|null; per_user_limit:number; usage_count:number; is_active:boolean };
 type ReturnRequest = { id: string; order_id: string; user_id: string; reason: string; details: string | null; status: string; admin_note: string | null; requested_at: string; orders?: { total_amount: number; shipping_address: any } | null };
 type DeliveryZone = { id:string; district:string; is_serviceable:boolean; delivery_fee:number; free_delivery_threshold:number; min_delivery_days:number; max_delivery_days:number; postal_codes:string; };
-type ProductVariant = { id:string; product_id:string; label:string; price:number|null; stock_quantity:number; is_active:boolean; };
+type ProductVariant = { id:string; product_id:string; label:string; price:number|null; stock_quantity:number; is_active:boolean; sort_order:number; };
 type Product = {
   id: string; name: string; slug: string; description: string | null;
   price: number; compare_at_price: number | null; image_url: string | null;
@@ -329,7 +329,7 @@ export default function Admin() {
   const openVariantManager = async (productId: string) => {
     if (managedVariantProduct === productId) { setManagedVariantProduct(null); return; }
     setManagedVariantProduct(productId); setVariantLabel(''); setVariantPrice(''); setVariantStock('0'); setEditingVariantId(null);
-    const { data, error } = await supabase.from('product_variants').select('id,product_id,label,price,stock_quantity,is_active').eq('product_id', productId).order('sort_order').order('created_at');
+    const { data, error } = await supabase.from('product_variants').select('id,product_id,label,price,stock_quantity,is_active,sort_order').eq('product_id', productId).order('sort_order').order('created_at');
     if (error) { setMessage('Product options load nahi huye: ' + error.message); return; }
     setManagedVariants((data || []) as ProductVariant[]);
   };
@@ -339,6 +339,10 @@ export default function Admin() {
     if (!managedVariantProduct || !variantLabel.trim() || !Number.isInteger(Number(variantStock)) || Number(variantStock) < 0 || (variantPrice && (!Number.isFinite(Number(variantPrice)) || Number(variantPrice) < 0))) {
       setMessage('Option label, valid stock aur optional valid price enter karein.'); return;
     }
+    const normalizedLabel = variantLabel.trim().toLocaleLowerCase();
+    if (managedVariants.some(item => item.id !== editingVariantId && item.label.trim().toLocaleLowerCase() === normalizedLabel)) {
+      setMessage('Is product ke liye yeh option label pehle se maujood hai.'); return;
+    }
     setVariantBusy(true); setMessage('');
     const payload = {
       label: variantLabel.trim(),
@@ -347,8 +351,8 @@ export default function Admin() {
       updated_at: new Date().toISOString(),
     };
     const result = editingVariantId
-      ? await supabase.from('product_variants').update(payload).eq('id', editingVariantId).select('id,product_id,label,price,stock_quantity,is_active').single()
-      : await supabase.from('product_variants').insert({ ...payload, product_id: managedVariantProduct, sort_order: managedVariants.length }).select('id,product_id,label,price,stock_quantity,is_active').single();
+      ? await supabase.from('product_variants').update(payload).eq('id', editingVariantId).select('id,product_id,label,price,stock_quantity,is_active,sort_order').single()
+      : await supabase.from('product_variants').insert({ ...payload, product_id: managedVariantProduct, sort_order: Math.max(-1, ...managedVariants.map(item => item.sort_order ?? -1)) + 1 }).select('id,product_id,label,price,stock_quantity,is_active,sort_order').single();
     setVariantBusy(false);
     if (result.error) { setMessage('Option save nahi hua: ' + result.error.message); return; }
     setManagedVariants(current => editingVariantId
