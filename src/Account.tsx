@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase';
 import PhoneLinkCard from './PhoneLinkCard';
-import { ArrowLeft, Bell, CheckCircle2, LogOut, MapPin, Plus, ShieldCheck, Trash2, UserRound, X, Package, RefreshCw, ChevronDown, ChevronUp, Heart } from 'lucide-react';
+import { ArrowLeft, Bell, CheckCircle2, LogOut, MapPin, Plus, ShieldCheck, Trash2, UserRound, X, Package, RefreshCw, ChevronDown, ChevronUp, Heart, Volume2, VolumeX } from 'lucide-react';
 
 type CustomerOrder = {
   id: string;
@@ -78,6 +78,36 @@ export default function Account() {
   const [statusNotification, setStatusNotification] = useState('');
   const [notifications, setNotifications] = useState<any[]>([]);
   const [notificationsBusy, setNotificationsBusy] = useState(false);
+  const [notificationSoundEnabled, setNotificationSoundEnabled] = useState(() => { try { return localStorage.getItem('puash-notification-sound') !== 'off'; } catch { return true; } });
+  const notificationAudioRef = useRef<AudioContext | null>(null);
+
+  const playNotificationSound = (force = false) => {
+    if (!force && !notificationSoundEnabled) return;
+    try {
+      const AudioContextClass = window.AudioContext;
+      if (!AudioContextClass) return;
+      const context = notificationAudioRef.current || (notificationAudioRef.current = new AudioContextClass());
+      void context.resume().then(() => {
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, context.currentTime);
+        oscillator.frequency.setValueAtTime(660, context.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.0001, context.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.12, context.currentTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.28);
+        oscillator.connect(gain); gain.connect(context.destination);
+        oscillator.start(); oscillator.stop(context.currentTime + 0.3);
+      }).catch(() => {});
+    } catch { /* Audio is optional; notifications remain visible without it. */ }
+  };
+
+  const toggleNotificationSound = () => {
+    const next = !notificationSoundEnabled;
+    setNotificationSoundEnabled(next);
+    try { localStorage.setItem('puash-notification-sound', next ? 'on' : 'off'); } catch { /* Ignore unavailable storage. */ }
+    if (next) playNotificationSound(true);
+  };
   const [returnDrafts, setReturnDrafts] = useState<Record<string,{reason:string;details:string}>>({});
   const [returnBusy, setReturnBusy] = useState<string|null>(null);
   const [addressForm, setAddressForm] = useState(blankAddress);
@@ -166,6 +196,7 @@ export default function Account() {
     const channel = supabase.channel('puash-customer-notifications-' + user.id)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: 'user_id=eq.' + user.id }, payload => {
         setNotifications(items => [payload.new as any, ...items].slice(0, 40));
+        playNotificationSound();
       }).subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [user?.id]);
@@ -191,6 +222,7 @@ export default function Account() {
           processing: 'Preparing', shipped: 'Shipped',
           delivered: 'Delivered', cancelled: 'Cancelled',
         };
+        playNotificationSound();
         setStatusNotification(shippingChanged && !statusChanged
           ? 'Shipping details updated for order #' + changed.id.slice(0, 8).toUpperCase() + '.'
           : 'Your PUASH order #' + changed.id.slice(0, 8).toUpperCase() + ' is now: ' + (labels[changed.status] || changed.status) + '.');
@@ -216,6 +248,7 @@ export default function Account() {
           ? { ...order, order_return_requests: (order.order_return_requests || []).map(request => request.id === changed.id ? changed : request) }
           : order);
         setOrders(ordersRef.current);
+        playNotificationSound();
         setStatusNotification('PUASH updated your return request for order #' + changed.order_id.slice(0,8).toUpperCase() + '.');
       }).subscribe();
     return () => { void supabase.removeChannel(channel); };
@@ -417,6 +450,7 @@ export default function Account() {
         <section className="account-notifications">
           <div className="address-book-heading">
             <div><Bell size={18}/><strong>Notifications</strong><span className="customer-order-count">{notifications.filter(item => !item.is_read).length}</span></div>
+            <button type="button" className="address-add" onClick={toggleNotificationSound} aria-pressed={notificationSoundEnabled} title={notificationSoundEnabled ? 'Turn notification sound off' : 'Turn notification sound on'}>{notificationSoundEnabled ? <Volume2 size={14}/> : <VolumeX size={14}/>} Sound {notificationSoundEnabled ? 'on' : 'off'}</button>
             <div className="notification-actions">
               <button type="button" className="address-add" disabled={!notifications.some(item => !item.is_read)} onClick={markAllNotificationsRead}>Mark all read</button>
               <button type="button" className="address-add" disabled={notificationsBusy} onClick={() => loadNotifications(user.id)}><RefreshCw size={14}/> Refresh</button>
