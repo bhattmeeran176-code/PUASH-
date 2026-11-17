@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { parsePostalCodes } from '../src/utils/postal-codes.js';
 
 test('parses comma, whitespace, semicolon and newline separated PINs', () => {
-  const result = parsePostalCodes('190001, 190002;190003\\n190004');
+  const result = parsePostalCodes('190001, 190002;190003\n190004');
   assert.deepEqual(result.postalCodes, ['190001', '190002', '190003', '190004']);
   assert.deepEqual(result.invalid, []);
   assert.equal(result.total, 4);
@@ -22,7 +22,7 @@ test('reports malformed entries without silently saving them', () => {
 });
 
 test('empty input produces no PIN restrictions', () => {
-  assert.deepEqual(parsePostalCodes('  , ;\\n '), {
+  assert.deepEqual(parsePostalCodes('  , ;\n '), {
     postalCodes: [], invalid: [], duplicates: 0, total: 0
   });
 });
