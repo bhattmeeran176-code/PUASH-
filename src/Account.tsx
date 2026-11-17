@@ -253,9 +253,9 @@ export default function Account() {
 
   const requestPhoneOtp = async () => {
     const rawPhone = phoneNumber.trim();
-    const digits = rawPhone.replace(/\\D/g, '');
+    const digits = rawPhone.replace(/\D/g, '');
     const normalizedPhone = rawPhone.startsWith('+') ? '+' + digits : digits.length === 10 ? '+91' + digits : '';
-    if (!/^\\+[1-9]\\d{7,14}$/.test(normalizedPhone)) {
+    if (!/^\+[1-9]\d{7,14}$/.test(normalizedPhone)) {
       setError('Valid phone number enter karein, country code ke saath. India ke liye 10-digit number bhi chalega.');
       return;
     }
@@ -276,7 +276,7 @@ export default function Account() {
 
   const verifyPhoneOtp = async (event: FormEvent) => {
     event.preventDefault();
-    if (!/^\\d{6}$/.test(phoneOtp.trim())) {
+    if (!/^\d{6}$/.test(phoneOtp.trim())) {
       setError('6-digit OTP enter karein.');
       return;
     }
@@ -401,7 +401,7 @@ export default function Account() {
             <p className="account-auth-note">We'll send a one-time 6-digit code by SMS. Enter your country code for numbers outside India.</p>
             <button className="account-primary" disabled={busy}>{busy ? 'Sending OTP…' : 'Send OTP'}</button>
           </form> : <form className="account-form" onSubmit={verifyPhoneOtp}>
-            <label>6-digit OTP<input type="text" inputMode="numeric" autoComplete="one-time-code" value={phoneOtp} onChange={e=>setPhoneOtp(e.target.value.replace(/\\D/g,'').slice(0,6))} required maxLength={6} pattern="[0-9]{6}" placeholder="Enter OTP"/></label>
+            <label>6-digit OTP<input type="text" inputMode="numeric" autoComplete="one-time-code" value={phoneOtp} onChange={e=>setPhoneOtp(e.target.value.replace(/\D/g,'').slice(0,6))} required maxLength={6} pattern="[0-9]{6}" placeholder="Enter OTP"/></label>
             <p className="account-auth-note">Code sent to {phoneNumber}. OTP delivery depends on PUASH's configured SMS provider.</p>
             <button className="account-primary" disabled={busy}>{busy ? 'Verifying…' : 'Verify and sign in'}</button>
             <button type="button" className="account-switch" disabled={busy} onClick={()=>void requestPhoneOtp()}>Resend OTP</button>
@@ -411,7 +411,7 @@ export default function Account() {
       </> : <>
         <h1>My account.</h1>
         <p>Apni profile aur delivery addresses yahan manage karein.</p>
-        <div className="account-email"><small>Signed in as</small><strong>{user.email}</strong></div>
+        <div className="account-email"><small>Signed in as</small><strong>{user.email || user.phone || 'Phone account'}</strong></div>
         <section className="account-notifications">
           <div className="address-book-heading">
             <div><Bell size={18}/><strong>Notifications</strong><span className="customer-order-count">{notifications.filter(item => !item.is_read).length}</span></div>
