@@ -2236,3 +2236,18 @@ main {
  .home-shelf-info>div strong{font-size:13px}
  .home-shelf-add{min-height:33px}
 }
+
+
+/* Phase one: accessible product refinement controls */
+.advanced-filter-panel{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:0 0 20px;padding:15px;border:1px solid #e8e4da;border-radius:9px;background:#fffefa}
+.advanced-filter-title{display:flex;align-items:center;gap:7px;align-self:center;margin-right:auto;color:#405d46;font-size:11px}
+.filter-field{display:grid;gap:5px;min-width:130px;color:#77736b;font-size:9px;font-weight:700}
+.filter-field input,.filter-field select{width:100%;min-height:36px;padding:8px 10px;border:1px solid #e5e0d6;border-radius:5px;background:#fff;color:#25231f;font-size:11px}
+.clear-filter-button{min-height:36px;padding:8px 12px;border:1px solid #d9dfd1;border-radius:5px;background:#f4f7f1;color:#405d46;font-size:10px;font-weight:700}
+.filter-validation{margin:-9px 0 14px;color:#a9482d;font-size:11px}
+@media(max-width:600px){
+ .advanced-filter-panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:12px}
+ .advanced-filter-title{grid-column:1/-1}
+ .filter-field{min-width:0}
+ .clear-filter-button{grid-column:1/-1}
+}
