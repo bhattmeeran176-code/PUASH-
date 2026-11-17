@@ -37,6 +37,7 @@ export default function Admin() {
   const [variantLabel, setVariantLabel] = useState('');
   const [variantPrice, setVariantPrice] = useState('');
   const [variantStock, setVariantStock] = useState('0');
+  const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
   const [variantBusy, setVariantBusy] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -292,7 +293,7 @@ export default function Admin() {
 
   const openVariantManager = async (productId: string) => {
     if (managedVariantProduct === productId) { setManagedVariantProduct(null); return; }
-    setManagedVariantProduct(productId); setVariantLabel(''); setVariantPrice(''); setVariantStock('0');
+    setManagedVariantProduct(productId); setVariantLabel(''); setVariantPrice(''); setVariantStock('0'); setEditingVariantId(null);
     const { data, error } = await supabase.from('product_variants').select('id,product_id,label,price,stock_quantity,is_active').eq('product_id', productId).order('sort_order').order('created_at');
     if (error) { setMessage('Product options load nahi huye: ' + error.message); return; }
     setManagedVariants((data || []) as ProductVariant[]);
@@ -304,16 +305,29 @@ export default function Admin() {
       setMessage('Option label, valid stock aur optional valid price enter karein.'); return;
     }
     setVariantBusy(true); setMessage('');
-    const { data, error } = await supabase.from('product_variants').insert({
-      product_id: managedVariantProduct, label: variantLabel.trim(),
+    const payload = {
+      label: variantLabel.trim(),
       price: variantPrice.trim() ? Number(variantPrice) : null,
-      stock_quantity: Number(variantStock), sort_order: managedVariants.length,
-    }).select('id,product_id,label,price,stock_quantity,is_active').single();
+      stock_quantity: Number(variantStock),
+      updated_at: new Date().toISOString(),
+    };
+    const result = editingVariantId
+      ? await supabase.from('product_variants').update(payload).eq('id', editingVariantId).select('id,product_id,label,price,stock_quantity,is_active').single()
+      : await supabase.from('product_variants').insert({ ...payload, product_id: managedVariantProduct, sort_order: managedVariants.length }).select('id,product_id,label,price,stock_quantity,is_active').single();
     setVariantBusy(false);
-    if (error) { setMessage('Option save nahi hua: ' + error.message); return; }
-    setManagedVariants(current => [...current, data as ProductVariant]);
-    setVariantLabel(''); setVariantPrice(''); setVariantStock('0');
-    setMessage('Product option add ho gaya.');
+    if (result.error) { setMessage('Option save nahi hua: ' + result.error.message); return; }
+    setManagedVariants(current => editingVariantId
+      ? current.map(item => item.id === editingVariantId ? result.data as ProductVariant : item)
+      : [...current, result.data as ProductVariant]);
+    setVariantLabel(''); setVariantPrice(''); setVariantStock('0'); setEditingVariantId(null);
+    setMessage(editingVariantId ? 'Product option update ho gaya.' : 'Product option add ho gaya.');
+  };
+
+  const editVariant = (variant: ProductVariant) => {
+    setEditingVariantId(variant.id);
+    setVariantLabel(variant.label);
+    setVariantPrice(variant.price === null ? '' : String(variant.price));
+    setVariantStock(String(variant.stock_quantity));
   };
 
   const removeVariant = async (variant: ProductVariant) => {
@@ -322,6 +336,7 @@ export default function Admin() {
     setVariantBusy(false);
     if (error) { setMessage('Option remove nahi hua: ' + error.message); return; }
     setManagedVariants(current => current.filter(item => item.id !== variant.id));
+    if (editingVariantId === variant.id) { setEditingVariantId(null); setVariantLabel(''); setVariantPrice(''); setVariantStock('0'); }
     setMessage('Product option remove ho gaya.');
   };
 
@@ -393,17 +408,29 @@ export default function Admin() {
     }
     const savedProductId = editing || result.data?.id;
     if (savedProductId && galleryFiles.length) {
+      const { data: existingGallery, error: existingGalleryError } = await supabase.from('product_images').select('id,sort_order').eq('product_id', savedProductId);
+      if (existingGalleryError) { setBusy(false); setMessage('Existing product gallery load nahi hui: ' + existingGalleryError.message); await loadData(); return; }
+      if ((existingGallery?.length || 0) + galleryFiles.length > 8) { setBusy(false); setMessage('Ek product ke liye maximum 8 additional gallery images allowed hain.'); return; }
+      const nextSortOrder = Math.max(0, ...(existingGallery || []).map((item: any) => Number(item.sort_order) || 0)) + 1;
       const galleryRows: { product_id: string; image_url: string; storage_path: string; alt_text: string; sort_order: number }[] = [];
+      const uploadedGalleryPaths: string[] = [];
       for (let index = 0; index < galleryFiles.length; index++) {
         const file = galleryFiles[index];
         const safeName = file.name.toLowerCase().replace(/[^a-z0-9.-]+/g, '-');
         const path = 'gallery/' + savedProductId + '/' + Date.now() + '-' + crypto.randomUUID().slice(0, 8) + '-' + safeName;
         const { error: uploadError } = await supabase.storage.from('product-images').upload(path, file, { upsert: false, contentType: file.type });
-        if (uploadError) { setBusy(false); setMessage('Product save ho gaya, lekin gallery upload ruk gaya: ' + uploadError.message); await loadData(); return; }
-        galleryRows.push({ product_id: savedProductId, image_url: supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl, storage_path: path, alt_text: name.trim(), sort_order: index + 1 });
+        if (uploadError) {
+          if (uploadedGalleryPaths.length) await supabase.storage.from('product-images').remove(uploadedGalleryPaths);
+          setBusy(false); setMessage('Product save ho gaya, lekin gallery upload ruk gaya: ' + uploadError.message); await loadData(); return;
+        }
+        uploadedGalleryPaths.push(path);
+        galleryRows.push({ product_id: savedProductId, image_url: supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl, storage_path: path, alt_text: name.trim(), sort_order: nextSortOrder + index });
       }
       const { error: galleryError } = await supabase.from('product_images').insert(galleryRows);
-      if (galleryError) { setBusy(false); setMessage('Product save ho gaya, lekin gallery record save nahi hua: ' + galleryError.message); await loadData(); return; }
+      if (galleryError) {
+        await supabase.storage.from('product-images').remove(uploadedGalleryPaths);
+        setBusy(false); setMessage('Product save ho gaya, lekin gallery record save nahi hua: ' + galleryError.message); await loadData(); return;
+      }
     }
     setBusy(false);
     setMessage(editing ? 'Product update ho gaya.' : 'Product add ho gaya.');
@@ -622,12 +649,13 @@ export default function Admin() {
             {managedVariantProduct === p.id && <div className="admin-variant-manager">
               <strong>Size / colour options for {p.name}</strong>
               <p className="admin-shipping-help">Use labels such as “Size M · Blue” or “500 g”. Leave price blank to use the base product price.</p>
-              {managedVariants.map(variant=><div className="admin-variant-row" key={variant.id}><span>{variant.label}</span><small>{variant.price===null?'Base price':money(Number(variant.price))} · Stock {variant.stock_quantity}</small><button type="button" disabled={variantBusy} onClick={()=>void removeVariant(variant)}>Remove</button></div>)}
+              {managedVariants.map(variant=><div className="admin-variant-row" key={variant.id}><span>{variant.label}</span><small>{variant.price===null?'Base price':money(Number(variant.price))} · Stock {variant.stock_quantity}</small><button type="button" disabled={variantBusy} onClick={()=>editVariant(variant)}>Edit</button><button type="button" disabled={variantBusy} onClick={()=>void removeVariant(variant)}>Remove</button></div>)}
               <form className="admin-variant-form" onSubmit={saveVariant}>
                 <label>Option label<input value={variantLabel} onChange={e=>setVariantLabel(e.target.value)} maxLength={120} required placeholder="Size M · Blue"/></label>
                 <label>Price (₹, optional)<input type="number" min="0" step="0.01" value={variantPrice} onChange={e=>setVariantPrice(e.target.value)} placeholder="Use base price"/></label>
                 <label>Option stock<input type="number" min="0" step="1" value={variantStock} onChange={e=>setVariantStock(e.target.value)} required/></label>
-                <button className="admin-primary" disabled={variantBusy}>{variantBusy?'Saving…':'Add option'}</button>
+                <button className="admin-primary" disabled={variantBusy}>{variantBusy?'Saving…':editingVariantId?'Update option':'Add option'}</button>
+                {editingVariantId && <button type="button" onClick={()=>{setEditingVariantId(null);setVariantLabel('');setVariantPrice('');setVariantStock('0');}}>Cancel edit</button>}
               </form>
             </div>}
           </article>)}</div>}
