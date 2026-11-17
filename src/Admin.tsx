@@ -24,8 +24,8 @@ const money = (value: number) => '₹' + Number(value || 0).toLocaleString('en-I
 const slugify = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 const getPostalCodeStats = (value: string) => {
-  const entries = value.split(/[\\s,;]+/).map(pin => pin.trim()).filter(Boolean);
-  const valid = entries.filter(pin => /^\\d{6}$/.test(pin));
+  const entries = value.split(/[\s,;]+/).map(pin => pin.trim()).filter(Boolean);
+  const valid = entries.filter(pin => /^\d{6}$/.test(pin));
   return { total: entries.length, unique: new Set(valid).size, duplicates: valid.length - new Set(valid).size, invalid: entries.length - valid.length };
 };
 
