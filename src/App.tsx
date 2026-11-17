@@ -274,10 +274,15 @@ function App() {
       setDeliveryQuoteBusy(false);
       return;
     }
+    setDeliveryQuote(null);
     setDeliveryQuoteBusy(true);
     supabase.rpc('get_delivery_quote', { p_address_id: selectedAddressId, p_subtotal: subtotal }).then(({ data, error }) => {
       if (!current) return;
       setDeliveryQuote(error ? { serviceable: false, reason: error.message || 'Delivery could not be verified' } : data);
+      setDeliveryQuoteBusy(false);
+    }).catch(() => {
+      if (!current) return;
+      setDeliveryQuote({ serviceable: false, reason: 'Delivery could not be verified. Please try again.' });
       setDeliveryQuoteBusy(false);
     });
     return () => { current = false; };
