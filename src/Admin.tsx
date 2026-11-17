@@ -23,6 +23,12 @@ type Product = {
 const money = (value: number) => '₹' + Number(value || 0).toLocaleString('en-IN');
 const slugify = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
+const getPostalCodeStats = (value: string) => {
+  const entries = value.split(/[\\s,;]+/).map(pin => pin.trim()).filter(Boolean);
+  const valid = entries.filter(pin => /^\\d{6}$/.test(pin));
+  return { total: entries.length, unique: new Set(valid).size, duplicates: valid.length - new Set(valid).size, invalid: entries.length - valid.length };
+};
+
 export default function Admin() {
   const [sessionReady, setSessionReady] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -623,7 +629,7 @@ export default function Admin() {
             <label>Min days<input type="number" min="0" value={zone.min_delivery_days} onChange={e=>setDeliveryZones(items=>items.map(item=>item.id===zone.id?{...item,min_delivery_days:Number(e.target.value)}:item))}/></label>
             <label>Max days<input type="number" min="0" value={zone.max_delivery_days} onChange={e=>setDeliveryZones(items=>items.map(item=>item.id===zone.id?{...item,max_delivery_days:Number(e.target.value)}:item))}/></label>
           </div>
-          <label className="admin-delivery-pin-list">Allowed PIN codes <small>Comma, space ya new line se separate karein. Empty chhorne par poora district eligible rahega.</small><textarea rows={3} value={zone.postal_codes} onChange={e=>setDeliveryZones(items=>items.map(item=>item.id===zone.id?{...item,postal_codes:e.target.value}:item))} placeholder="190001, 190002, 190003" /></label>
+          <label className="admin-delivery-pin-list">Allowed PIN codes <small>Comma, space ya new line se separate karein. Empty chhorne par poora district eligible rahega.</small><textarea rows={4} value={zone.postal_codes} onChange={e=>setDeliveryZones(items=>items.map(item=>item.id===zone.id?{...item,postal_codes:e.target.value}:item))} placeholder="190001, 190002, 190003" /><span className="admin-shipping-help">PIN summary: {getPostalCodeStats(zone.postal_codes).unique} unique valid · {getPostalCodeStats(zone.postal_codes).duplicates} duplicates · {getPostalCodeStats(zone.postal_codes).invalid} invalid · {getPostalCodeStats(zone.postal_codes).total} entries</span>{getPostalCodeStats(zone.postal_codes).invalid>0 && <span className="admin-shipping-help">Save se pehle invalid entries remove karein. Har PIN exactly 6 digits ka hona chahiye.</span>}{zone.postal_codes.trim()==="" && <span className="admin-shipping-help">District-wide fallback active rahega: district ke andar PIN-level restriction nahi hogi.</span>}</label>
           <button className="admin-primary admin-zone-save" disabled={orderBusy===zone.id} onClick={()=>saveDeliveryZone(zone)}>{orderBusy===zone.id?'Saving…':'Save district settings'}</button>
         </article>)}</div>
       </section> : activeTab === 'sales' ? <section className="admin-sales-dashboard">
