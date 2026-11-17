@@ -698,9 +698,10 @@ function App() {
           ) : visibleProducts.length > 0 ? (
             <div className="product-grid">
               {visibleProducts.map(product => {
-                const discount = Math.round(
-                  (1 - product.price / product.mrp) * 100
-                );
+                const hasDiscount = product.mrp > product.price && product.mrp > 0;
+                const discount = hasDiscount
+                  ? Math.round((1 - product.price / product.mrp) * 100)
+                  : 0;
                 return (
                   <article className="product-card" key={product.id}>
                     <button
@@ -732,18 +733,28 @@ function App() {
                         {product.name}
                       </button>
                       <div className="rating-line">
-                        <span className="rating">
-                          <Star size={12} fill="currentColor" />{' '}
-                          {product.rating}
-                        </span>
-                        <span className="review-count">
-                          ({product.reviews} reviews)
-                        </span>
+                        {product.reviews > 0 ? (
+                          <>
+                            <span className="rating">
+                              <Star size={12} fill="currentColor" />{' '}
+                              {product.rating.toFixed(1)}
+                            </span>
+                            <span className="review-count">
+                              ({product.reviews} {product.reviews === 1 ? 'review' : 'reviews'})
+                            </span>
+                          </>
+                        ) : (
+                          <span className="review-count">No reviews yet</span>
+                        )}
                       </div>
                       <div className="price-row">
                         <strong>{money(product.price)}</strong>
-                        <del>{money(product.mrp)}</del>
-                        <span>{discount}% off</span>
+                        {hasDiscount && (
+                          <>
+                            <del>{money(product.mrp)}</del>
+                            <span>{discount}% off</span>
+                          </>
+                        )}
                       </div>
                       <button
                         className="add-button"
