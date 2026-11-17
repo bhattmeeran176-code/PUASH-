@@ -3,6 +3,7 @@ import { parsePostalCodes } from './utils/postal-codes.js';
 import { validateProductNumbers } from './utils/product-validation.js';
 import { validateProductPublishing } from './utils/product-publishing.js';
 import { isGalleryWithinLimit } from './utils/gallery-validation.js';
+import { validateProductImageFiles } from './utils/product-image-validation.js';
 import { FormEvent, useEffect, useState } from 'react';
 import { supabase } from './supabase';
 import { ArrowLeft, BarChart3, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X, AlertTriangle, TrendingUp, Users, UserRound, ChevronDown, ChevronUp, Download, Activity, Truck } from 'lucide-react';
