@@ -256,6 +256,8 @@ function App() {
     return list;
   }, [category, search, sort, products, minPrice, maxPrice, minRating, savedOnly, wishlist]);
 
+  const discountedProducts = products.filter(product => product.stock > 0 && product.mrp > product.price).slice(0, 3);
+
   const cartItems: CartLine[] = Object.entries(cart).flatMap(([cartKey, quantity]) => {
     if (!quantity) return [];
     const [productId, variantId] = cartKey.split('::');
@@ -581,124 +583,45 @@ function App() {
       </header>
 
       <main>
-        <section className="hero">
-          <div className="hero-copy">
-            <div className="eyebrow">
-              <span className="eyebrow-line" /> THE PUASH EDIT
+        <section className="market-promo" aria-label="PUASH featured offers">
+          {discountedProducts.length > 0 ? (
+            <div className="market-promo-track">
+              {discountedProducts.map((product, index) => {
+                const discount = Math.round((1 - product.price / product.mrp) * 100);
+                return (
+                  <article className={'market-promo-card promo-card-' + index} key={product.id}>
+                    <div className="market-promo-copy">
+                      <span className="market-promo-kicker">PUASH PICKS · LIMITED OFFERS</span>
+                      <h1>{index === 0 ? 'A little something special.' : 'Good finds, better value.'}</h1>
+                      <p>{product.name}</p>
+                      <div className="market-promo-price"><strong>{money(product.price)}</strong><del>{money(product.mrp)}</del><b>{discount}% OFF</b></div>
+                      <button type="button" onClick={() => { rememberViewedProduct(product); window.location.href = '/product/' + product.id; }}>Explore offer <ArrowRight size={14}/></button>
+                    </div>
+                    <button className="market-promo-image" type="button" onClick={() => { rememberViewedProduct(product); window.location.href = '/product/' + product.id; }} aria-label={'View ' + product.name}>
+                      {product.imageUrl ? <img src={product.imageUrl} alt={product.name}/> : <span>{product.emoji}</span>}
+                    </button>
+                  </article>
+                );
+              })}
             </div>
-            <h1>
-              Good finds.
-              <br />
-              <em>Good feeling.</em>
-            </h1>
-            <p>Everyday essentials and little discoveries, all in one place.</p>
-            <button className="primary-button" onClick={startShopping}>
-              Explore products <ArrowRight size={17} />
-            </button>
-            <div className="hero-note">
-              <span>✦</span> A little inspiration from Kashmir
+          ) : (
+            <div className="market-promo-card market-promo-editorial">
+              <div className="market-promo-copy">
+                <span className="market-promo-kicker">WELCOME TO PUASH</span>
+                <h1>Discover something lovely.</h1>
+                <p>Everyday finds, thoughtfully brought together.</p>
+                <button type="button" onClick={startShopping}>Explore collection <ArrowRight size={14}/></button>
+              </div>
+              <div className="market-promo-emblem" aria-hidden="true"><ShoppingBag size={68}/><span>PUASH</span></div>
             </div>
-          </div>
-          <div
-            className="hero-art delivery-art"
-            aria-label="Animated illustration of a PUASH delivery rider on a scooter"
-          >
-            <div className="delivery-halo" />
-            <div className="delivery-route" />
-            <div className="delivery-badge"><span>✦</span><strong>On the way</strong><small>Every order, with care</small></div>
-            <svg className="delivery-scene" viewBox="0 0 560 360" role="img" aria-label="A delivery rider carrying a parcel on a green scooter">
-              <ellipse cx="285" cy="316" rx="205" ry="17" fill="#315b48" opacity=".12" />
-              <path d="M52 295 Q155 279 250 293 T510 291" fill="none" stroke="#d7cbb8" strokeWidth="2" strokeDasharray="5 10" />
-              <g className="delivery-cloud cloud-a"><path d="M0 22c0-9 8-16 18-16 5-9 19-8 23 2 11-2 18 7 17 15H0Z" fill="#fffdf8" opacity=".8"/></g>
-              <g className="delivery-cloud cloud-b"><path d="M0 22c0-9 8-16 18-16 5-9 19-8 23 2 11-2 18 7 17 15H0Z" fill="#fffdf8" opacity=".65"/></g>
-              <g className="delivery-scooter">
-                <circle cx="190" cy="278" r="39" fill="#244b3a"/>
-                <circle cx="190" cy="278" r="22" fill="#f4eadb"/>
-                <circle cx="190" cy="278" r="8" fill="#c9a77e"/>
-                <circle cx="397" cy="278" r="39" fill="#244b3a"/>
-                <circle cx="397" cy="278" r="22" fill="#f4eadb"/>
-                <circle cx="397" cy="278" r="8" fill="#c9a77e"/>
-                <path d="M183 263c10-28 35-48 71-50l73 2c19 1 34 14 38 31l17 28h-45c-12-27-45-37-68-17l-16 18h-70Z" fill="#315b48"/>
-                <path d="M298 214h47l31 48h-47l-31-48Z" fill="#426d55"/>
-                <path d="M344 211h28l25 23-8 10h-38l-13-18Z" fill="#d9b58e"/>
-                <path d="M365 212l17-32 13 2-12 38" fill="none" stroke="#244b3a" strokeWidth="9" strokeLinecap="round"/>
-                <path d="M378 179h30" stroke="#244b3a" strokeWidth="8" strokeLinecap="round"/>
-                <path d="M175 258h-28l-9-14" stroke="#244b3a" strokeWidth="9" strokeLinecap="round"/>
-                <path d="M145 245h-13" stroke="#d9b58e" strokeWidth="8" strokeLinecap="round"/>
-                <path d="M231 207c15-16 43-24 69-18l24 11-16 31-43 5-35-10Z" fill="#d9b58e"/>
-                <path d="M273 219l37 10 19 33-18 8-33-28-26-3Z" fill="#f4eadb"/>
-                <path d="M300 180c-5-23 8-43 30-48 20-4 37 9 39 28l-4 28-25 18-29-8Z" fill="#315b48"/>
-                <path d="M328 134c19-15 44-4 48 16l-4 18-18-6-26-28Z" fill="#244b3a"/>
-                <circle cx="353" cy="160" r="3" fill="#25231f"/>
-                <path d="M359 172q9 5 16-1" fill="none" stroke="#b96f54" strokeWidth="2.5" strokeLinecap="round"/>
-                <path d="M311 188l-30 34-31 1" fill="none" stroke="#315b48" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M281 222l-8 22" stroke="#d9b58e" strokeWidth="8" strokeLinecap="round"/>
-                <path d="M334 192l27 30 18-2" fill="none" stroke="#315b48" strokeWidth="13" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M377 220l10-15" stroke="#d9b58e" strokeWidth="7" strokeLinecap="round"/>
-                <g className="delivery-parcel">
-                  <rect x="174" y="126" width="92" height="76" rx="10" fill="#e6d2b5"/>
-                  <path d="M220 126v76M174 158h92" stroke="#c5a57e" strokeWidth="4"/>
-                  <path d="M207 145h26" stroke="#315b48" strokeWidth="3" strokeLinecap="round"/>
-                  <path d="M212 154h16" stroke="#315b48" strokeWidth="3" strokeLinecap="round"/>
-                </g>
-              </g>
-              <g className="delivery-sparkles" fill="#c66a48">
-                <path d="M103 132l5 12 12 5-12 5-5 12-5-12-12-5 12-5Z"/>
-                <path d="M453 107l4 9 9 4-9 4-4 9-4-9-9-4 9-4Z"/>
-                <circle cx="468" cy="197" r="4"/>
-              </g>
-            </svg>
-          </div>
-          <div className="hero-bottom">
-            <span>01 / DISCOVER</span>
-            <span>
-              SHOP THE EVERYDAY COLLECTION <ArrowRight size={13} />
-            </span>
-          </div>
+          )}
+          <div className="market-promo-dots" aria-hidden="true"><i/><i/><i/></div>
         </section>
 
-        <section className="home-feature-banner" aria-label="Discover PUASH collections">
-          <div className="home-feature-copy">
-            <span className="home-feature-kicker"><Sparkles size={13}/> SPECIAL FOR YOU</span>
-            <h2>Find your next favourite.</h2>
-            <p>Explore thoughtful picks across everyday categories, all in one place.</p>
-            <button type="button" onClick={startShopping}>Explore collection <ArrowRight size={15}/></button>
-          </div>
-          <div className="home-feature-art" aria-hidden="true">
-            <span className="feature-orbit orbit-a"/><span className="feature-orbit orbit-b"/>
-            <div className="feature-bag"><ShoppingBag size={62}/><i>PUASH</i></div>
-            <span className="feature-spark spark-a">✦</span><span className="feature-spark spark-b">✧</span>
-          </div>
-        </section>
-
-        <section className="benefit-row" aria-label="Shopping benefits">
-          <div>
-            <Truck size={20} />
-            <span>
-              <strong>Easy delivery</strong>
-              <small>Delivery options at checkout</small>
-            </span>
-          </div>
-          <div>
-            <ShieldCheck size={20} />
-            <span>
-              <strong>Simple shopping</strong>
-              <small>A clean, easy experience</small>
-            </span>
-          </div>
-          <div>
-            <PackageCheck size={20} />
-            <span>
-              <strong>Curated finds</strong>
-              <small>Everyday picks in one place</small>
-            </span>
-          </div>
-        </section>
-
-        <section className="home-category-section" aria-labelledby="home-category-title">
-          <div className="home-shelf-heading">
-            <div><span className="eyebrow">FIND YOUR EVERYDAY FAVOURITES</span><h2 id="home-category-title">Shop by category</h2></div>
-            <button type="button" onClick={startShopping}>Explore all <ArrowRight size={15}/></button>
+        <section className="home-category-section market-categories" aria-labelledby="home-category-title">
+          <div className="market-section-heading">
+            <h2 id="home-category-title">Category</h2>
+            <button type="button" onClick={startShopping}>See all <ArrowRight size={13}/></button>
           </div>
           <div className="home-category-grid">
             {categories.filter(item => item.name !== 'All').map(item => {
@@ -710,31 +633,18 @@ function App() {
                 }}>
                   <span className="home-category-emoji">{item.emoji}</span>
                   <strong>{item.name}</strong>
-                  <small>{count > 0 ? count + (count === 1 ? ' product' : ' products') : 'Explore collection'}</small>
-                  <ArrowRight size={15}/>
+                  <small>{count > 0 ? count + (count === 1 ? ' item' : ' items') : 'Explore'}</small>
                 </button>
               );
             })}
           </div>
         </section>
 
-        <section className="home-promo-strip" aria-label="PUASH shopping promise">
-          <div><span className="home-promo-icon">✦</span><span><strong>Discover something new</strong><small>Fresh finds for your everyday life</small></span></div>
-          <div><span className="home-promo-icon">♡</span><span><strong>Save what you love</strong><small>Keep favourites close with your wishlist</small></span></div>
-          <div><span className="home-promo-icon">⌁</span><span><strong>Easy checkout</strong><small>Clear totals before you place an order</small></span></div>
-        </section>
-
-        {renderHomeShelf('New arrivals', 'JUST ADDED TO PUASH', newArrivals, 'new-arrivals-title')}
-        {renderHomeShelf('Most reviewed', 'CUSTOMER FEEDBACK', popularProducts, 'popular-products-title')}
-        {renderHomeShelf('Best offers', 'GOOD VALUE PICKS', recommendedProducts, 'recommended-products-title')}
-        {renderHomeShelf('Top rated', 'CUSTOMER REVIEWS', topRatedProducts, 'top-rated-title')}
-        {renderHomeShelf('Recently viewed', 'PICK UP WHERE YOU LEFT OFF', recentlyViewedProducts, 'recently-viewed-title')}
-
         <section className="products-section" id="products">
           <div className="section-heading">
             <div>
               <div className="eyebrow">A LITTLE BIT OF EVERYTHING</div>
-              <h2>{category === 'All' ? 'Explore our picks' : category}</h2>
+              <h2>{discountedProducts.length > 0 && category === 'All' ? 'Flash Sale' : category === 'All' ? 'Explore products' : category}</h2>
               <p>Find something useful, lovely or just right for you.</p>
             </div>
             <label className="sort-control">
@@ -754,7 +664,7 @@ function App() {
               </select>
             </label>
           </div>
-          <div className="category-chips">
+          <div className="category-chips market-filter-chips">
             {categories.map(item => (
               <button
                 key={item.name}
