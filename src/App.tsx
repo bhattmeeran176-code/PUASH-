@@ -907,12 +907,15 @@ function App() {
         <div className="drawer-backdrop" onClick={() => setCartOpen(false)}>
           <aside
             className="cart-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cart-dialog-title"
             onClick={event => event.stopPropagation()}
           >
             <div className="drawer-heading">
               <div>
                 <span className="eyebrow">YOUR PICKS</span>
-                <h2>
+                <h2 id="cart-dialog-title">
                   Shopping cart <span>({cartCount})</span>
                 </h2>
               </div>
@@ -1003,6 +1006,9 @@ function App() {
         <div className="modal-backdrop" onClick={() => setCheckoutOpen(false)}>
           <section
             className="checkout-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="checkout-dialog-title"
             onClick={event => event.stopPropagation()}
           >
             <button
@@ -1016,7 +1022,7 @@ function App() {
               <ShieldCheck size={28} />
             </div>
             <div className="eyebrow">SECURE CHECKOUT</div>
-            <h2>Confirm your order.</h2>
+            <h2 id="checkout-dialog-title">Confirm your order.</h2>
             <p>Choose your saved delivery address. Payment method: Cash on Delivery.</p>
             {activeCheckoutAddress && <div className="checkout-delivery-status"><strong>{deliveryQuoteBusy ? 'Checking delivery availability…' : deliveryAvailable ? 'Delivery available · ' + deliveryQuote.district : 'Delivery unavailable'}</strong>{deliveryQuoteBusy ? <small>Verifying your district and PIN code.</small> : deliveryAvailable ? <small>PIN code verified · Estimated delivery: {deliveryQuote.min_delivery_days}–{deliveryQuote.max_delivery_days} days · {delivery === 0 ? 'Free delivery' : money(delivery) + ' delivery fee'}</small> : <small>{deliveryQuote?.reason || 'Select an address to check delivery.'}</small>}</div>}
             {checkoutAddresses.length > 0 && <div className="checkout-address-list">
@@ -1059,6 +1065,9 @@ function App() {
         <div className="modal-backdrop" onClick={() => setOrderId('')}>
           <section
             className="checkout-modal success-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="order-success-title"
             onClick={event => event.stopPropagation()}
           >
             <button
@@ -1072,7 +1081,7 @@ function App() {
               <CheckCircle2 size={34} />
             </div>
             <div className="eyebrow">THAT'S A WRAP</div>
-            <h2>Order received!</h2>
+            <h2 id="order-success-title">Order received!</h2>
             <p>Your Cash on Delivery order has been saved. You can track its status from your account.</p>
             <div className="order-number">
               <span>Order ID</span>
