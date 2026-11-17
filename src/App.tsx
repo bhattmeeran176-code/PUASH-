@@ -251,6 +251,8 @@ function App() {
     if (sort === 'low') list = [...list].sort((a, b) => a.price - b.price);
     if (sort === 'high') list = [...list].sort((a, b) => b.price - a.price);
     if (sort === 'rating') list = [...list].sort((a, b) => b.rating - a.rating);
+    if (sort === 'popular') list = [...list].sort((a, b) => b.reviews - a.reviews || b.rating - a.rating);
+    if (sort === 'newest') list = [...list].sort((a, b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || ''));
     return list;
   }, [category, search, sort, products, minPrice, maxPrice, minRating, savedOnly, wishlist]);
 
@@ -655,6 +657,20 @@ function App() {
           </div>
         </section>
 
+        <section className="home-feature-banner" aria-label="Discover PUASH collections">
+          <div className="home-feature-copy">
+            <span className="home-feature-kicker"><Sparkles size={13}/> SPECIAL FOR YOU</span>
+            <h2>Find your next favourite.</h2>
+            <p>Explore thoughtful picks across everyday categories, all in one place.</p>
+            <button type="button" onClick={startShopping}>Explore collection <ArrowRight size={15}/></button>
+          </div>
+          <div className="home-feature-art" aria-hidden="true">
+            <span className="feature-orbit orbit-a"/><span className="feature-orbit orbit-b"/>
+            <div className="feature-bag"><ShoppingBag size={62}/><i>PUASH</i></div>
+            <span className="feature-spark spark-a">✦</span><span className="feature-spark spark-b">✧</span>
+          </div>
+        </section>
+
         <section className="benefit-row" aria-label="Shopping benefits">
           <div>
             <Truck size={20} />
@@ -730,6 +746,8 @@ function App() {
                 aria-label="Sort products"
               >
                 <option value="featured">Featured</option>
+                <option value="newest">Newest first</option>
+                <option value="popular">Popular</option>
                 <option value="low">Price: low to high</option>
                 <option value="high">Price: high to low</option>
                 <option value="rating">Top rated</option>
@@ -885,34 +903,27 @@ function App() {
       </footer>
 
       <div className="mobile-bottom-nav">
-        <button
-          onClick={() => {
-            setCategory('All');
-            setSearch('');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-        >
-          <Home size={19} />
-          <span>Home</span>
+        <button className="active" onClick={() => {
+          setCategory('All'); setSearch(''); setSavedOnly(false);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}>
+          <Home size={19} /><span>Home</span>
         </button>
-        <button
-          onClick={() =>
-            document
-              .getElementById('products')
-              ?.scrollIntoView({ behavior: 'smooth' })
-          }
-        >
-          <Grid2X2 size={19} />
-          <span>Explore</span>
+        <button onClick={() => {
+          setSavedOnly(true);
+          document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' });
+        }}>
+          <Heart size={19} /><span>Wishlist</span>
         </button>
-        <button onClick={() => { window.location.href = '/account'; }}>
-          <UserRound size={19} />
-          <span>Account</span>
+        <button onClick={() => document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' })}>
+          <Grid2X2 size={19} /><span>Explore</span>
         </button>
         <button onClick={() => setCartOpen(true)} className="mobile-cart-nav">
-          <ShoppingBag size={19} />
-          <span>Cart</span>
+          <ShoppingBag size={19} /><span>Cart</span>
           {cartCount > 0 && <b>{cartCount}</b>}
+        </button>
+        <button onClick={() => { window.location.href = '/account'; }}>
+          <UserRound size={19} /><span>Profile</span>
         </button>
       </div>
 
