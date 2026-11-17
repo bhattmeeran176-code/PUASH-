@@ -686,7 +686,7 @@ export default function Admin() {
             </div>
           </> : <p className="admin-shipping-help">Reviewed: {application.status}</p>}
         </article>)}</div>
-      </section> : ctiveTab === 'delivery' ? <section className="admin-panel">
+      </section> : activeTab === 'delivery' ? <section className="admin-panel">
         <div className="admin-panel-heading"><div><span className="admin-panel-icon"><Truck size={17}/></span><strong>Jammu & Kashmir delivery zones</strong></div><small>{deliveryZones.filter(z=>z.is_serviceable).length} serviceable districts</small></div>
         <p className="admin-shipping-help">Har district ke liye delivery availability, fee, free-delivery threshold aur estimated delivery days configure karein. Changes checkout par server-side apply honge.</p>
         <div className="admin-delivery-zone-list">{deliveryZones.map(zone=><article className="admin-delivery-zone" key={zone.id}>
