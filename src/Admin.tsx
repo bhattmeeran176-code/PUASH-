@@ -113,7 +113,7 @@ export default function Admin() {
   const loadDeliveryZones = async () => {
     const [{ data, error }, { data: pinRows, error: pinError }] = await Promise.all([
       supabase.from('delivery_zones').select('id,district,is_serviceable,delivery_fee,free_delivery_threshold,min_delivery_days,max_delivery_days').order('district'),
-      supabase.from('delivery_zone_postal_codes').select('zone_id,postal_code'),
+      supabase.rpc('get_delivery_zone_postal_codes'),
     ]);
     if (error) { setMessage('Delivery zones load nahi hue: ' + error.message); return; }
     if (pinError) { setMessage('PIN-code settings load nahi hui: ' + pinError.message); return; }
