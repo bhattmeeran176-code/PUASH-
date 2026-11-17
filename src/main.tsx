@@ -5,6 +5,7 @@ import Admin from './Admin';
 import Account from './Account';
 import ProductDetail from './ProductDetail';
 import './index.css';
+import './cart-checkout.css';
 
 const currentPath = window.location.pathname;
 const Page = currentPath.startsWith('/admin') ? Admin : currentPath.startsWith('/account') ? Account : currentPath.startsWith('/product/') ? ProductDetail : App;
