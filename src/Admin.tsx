@@ -345,6 +345,10 @@ export default function Admin() {
   };
   const updateAdminFulfilment = async (id:string,status:string) => {
     if(!['confirmed','processing','shipped','delivered','cancelled'].includes(status))return;
+    if(status==='cancelled' && !window.confirm('Is seller ka fulfilment cancel hoga aur sirf isi seller ke products/variants ka stock restore hoga. Customer refund/payment settlement automatically process nahi hoga. Kya aap continue karna chahte hain?')) {
+      await loadSellerFulfilments();
+      return;
+    }
     setOrderBusy(id);setMessage('');
     const result = status === 'cancelled'
       ? await supabase.rpc('admin_cancel_seller_fulfillment',{p_fulfillment_id:id})
