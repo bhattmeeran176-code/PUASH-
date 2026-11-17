@@ -177,6 +177,67 @@ export default function ProductDetail() {
 
   const averageRating = reviews.length ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : 0;
 
+  useEffect(() => {
+    if (!product) return;
+    const previousTitle = document.title;
+    const descriptionTag = document.querySelector('meta[name="description"]');
+    const previousDescription = descriptionTag?.getAttribute('content') || '';
+    const previousOgTitle = document.querySelector('meta[property="og:title"]')?.getAttribute('content') || '';
+    const previousOgDescription = document.querySelector('meta[property="og:description"]')?.getAttribute('content') || '';
+    const previousOgImage = document.querySelector('meta[property="og:image"]')?.getAttribute('content') || '';
+    const pageTitle = product.name + ' | PUASH';
+    const pageDescription = (product.description || 'Discover ' + product.name + ' at PUASH.').replace(/\s+/g, ' ').slice(0, 155);
+    document.title = pageTitle;
+    if (descriptionTag) descriptionTag.setAttribute('content', pageDescription);
+    const setMeta = (selector: string, attribute: string, value: string) => {
+      let tag = document.querySelector(selector) as HTMLMetaElement | null;
+      if (!tag) {
+        tag = document.createElement('meta');
+        if (selector.includes('og:')) tag.setAttribute('property', selector.includes('og:title') ? 'og:title' : selector.includes('og:description') ? 'og:description' : 'og:image');
+        else tag.setAttribute('name', 'description');
+        document.head.appendChild(tag);
+      }
+      tag.setAttribute(attribute, value);
+    };
+    setMeta('meta[property="og:title"]', 'content', pageTitle);
+    setMeta('meta[property="og:description"]', 'content', pageDescription);
+    if (galleryImages[0]) setMeta('meta[property="og:image"]', 'content', galleryImages[0]);
+    const currentPrice = variants.find(item => item.id === selectedVariantId)?.price ?? product.price;
+    const structuredData: Record<string, unknown> = {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: product.name,
+      description: pageDescription,
+      image: galleryImages.length ? galleryImages : undefined,
+      category: product.category,
+      offers: {
+        '@type': 'Offer',
+        priceCurrency: 'INR',
+        price: currentPrice,
+        availability: (variants.length ? (variants.find(item => item.id === selectedVariantId)?.stock_quantity || 0) : product.stock) > 0
+          ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+        url: window.location.href,
+      },
+      ...(reviews.length ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: Number(averageRating.toFixed(1)), reviewCount: reviews.length } } : {}),
+    };
+    let script = document.getElementById('puash-product-schema') as HTMLScriptElement | null;
+    if (!script) {
+      script = document.createElement('script');
+      script.id = 'puash-product-schema';
+      script.type = 'application/ld+json';
+      document.head.appendChild(script);
+    }
+    script.textContent = JSON.stringify(structuredData);
+    return () => {
+      document.title = previousTitle;
+      if (descriptionTag) descriptionTag.setAttribute('content', previousDescription);
+      document.querySelector('meta[property="og:title"]')?.setAttribute('content', previousOgTitle);
+      document.querySelector('meta[property="og:description"]')?.setAttribute('content', previousOgDescription);
+      document.querySelector('meta[property="og:image"]')?.setAttribute('content', previousOgImage);
+      document.getElementById('puash-product-schema')?.remove();
+    };
+  }, [product, variants, selectedVariantId, reviews, averageRating, galleryImages]);
+
   return (
     <div className="product-detail-page">
       <header className="detail-header">
