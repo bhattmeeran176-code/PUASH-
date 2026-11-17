@@ -18,6 +18,7 @@ type SellerApplication = {
 };
 type SellerOrder = { fulfillment_id:string; order_id:string; order_status:string; order_created_at:string; seller_subtotal:number; delivery_address:any; seller_items:{product_name:string;quantity:number;unit_price:number;variant_label:string|null}[] };
 type SellerProduct = { id:string; name:string; description:string|null; price:number; compare_at_price:number|null; stock_quantity:number; image_url:string|null; is_active:boolean; created_at:string };
+type SellerEarning = {id:string;order_id:string;gross_amount:number;commission_rate:number;commission_amount:number;seller_payable:number;status:'pending'|'paid'|'on_hold';paid_at:string|null;payment_reference:string|null;admin_note:string|null;created_at:string};
 
 const emptyForm = {
   shop_name: '', contact_name: '', phone: '', category: 'General store',
@@ -43,6 +44,9 @@ export default function Seller() {
   const [sellerOrders,setSellerOrders]=useState<SellerOrder[]>([]);
   const [ordersBusy,setOrdersBusy]=useState(false);
   const [ordersError,setOrdersError]=useState('');
+  const [earnings,setEarnings]=useState<SellerEarning[]>([]);
+  const [earningsBusy,setEarningsBusy]=useState(false);
+  const [earningsError,setEarningsError]=useState('');
 
   useEffect(() => {
     let alive = true;
@@ -88,6 +92,12 @@ export default function Seller() {
     setOrdersBusy(false);
   };
 
+  const loadSellerEarnings = async () => {
+    setEarningsBusy(true);setEarningsError('');
+    const {data,error}=await supabase.from('seller_settlements').select('id,order_id,gross_amount,commission_rate,commission_amount,seller_payable,status,paid_at,payment_reference,admin_note,created_at').order('created_at',{ascending:false});
+    if(error)setEarningsError('Earnings load nahi hui: '+error.message);else setEarnings((data||[]) as SellerEarning[]);
+    setEarningsBusy(false);
+  };
   const loadSellerProducts = async () => {
     if (!application) return;
     const [{data:items,error:itemsError},{data:cats}] = await Promise.all([
@@ -125,7 +135,7 @@ export default function Seller() {
     await loadSellerProducts();
   };
 
-  useEffect(()=>{if(application?.status==='approved'){void loadSellerProducts();void loadSellerOrders();}},[application?.id,application?.status]);
+  useEffect(()=>{if(application?.status==='approved'){void loadSellerProducts();void loadSellerOrders();void loadSellerEarnings();}},[application?.id,application?.status]);
 
   const update = (key: keyof typeof emptyForm, value: string) => setForm(current => ({ ...current, [key]: value }));
 
@@ -188,6 +198,13 @@ export default function Seller() {
             {productError&&<div className="seller-error" role="alert">{productError}</div>}{productMessage&&<div className="seller-success" role="status">{productMessage}</div>}
             <button className="seller-submit" type="submit" disabled={productBusy}>{productBusy?'Saving…':editingProduct?'Save draft changes':'Submit product for review'}</button>
           </form>
+          <section className="seller-panel seller-earnings-panel">
+            <div className="seller-form-heading"><div><span className="seller-kicker">YOUR PAYOUT SUMMARY</span><h2>My earnings</h2></div><button type="button" className="seller-refresh" onClick={loadSellerEarnings} disabled={earningsBusy}><RefreshCw size={15}/> Refresh</button></div>
+            {(()=>{const pending=earnings.filter(x=>x.status==='pending').reduce((n,x)=>n+Number(x.seller_payable),0);const paid=earnings.filter(x=>x.status==='paid').reduce((n,x)=>n+Number(x.seller_payable),0);const held=earnings.filter(x=>x.status==='on_hold').reduce((n,x)=>n+Number(x.seller_payable),0);const gross=earnings.reduce((n,x)=>n+Number(x.gross_amount),0);return <div className="seller-earning-summary"><div><span>Pending payable</span><strong>₹{pending.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></div><div><span>Total paid</span><strong>₹{paid.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></div><div><span>On hold</span><strong>₹{held.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></div><div><span>Delivered gross sales</span><strong>₹{gross.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></div></div>})()}
+            {earningsError&&<div className="seller-error" role="alert">{earningsError}</div>}
+            {earningsBusy?<p className="seller-footnote">Earnings load ho rahi hain…</p>:earnings.length===0?<p className="seller-footnote">Abhi delivered orders ki settlement entry nahi bani. Delivered order ke baad yahan earnings show hongi.</p>:<div className="seller-earning-list">{earnings.map(x=><article className="seller-earning-row" key={x.id}><div className="seller-order-top"><strong>Order #{x.order_id.slice(0,8).toUpperCase()}</strong><span className={'seller-order-status '+x.status}>{x.status.replace('_',' ')}</span></div><div className="seller-earning-values"><span>Sales <strong>₹{Number(x.gross_amount).toLocaleString('en-IN')}</strong></span><span>PUASH commission ({x.commission_rate}%) <strong>₹{Number(x.commission_amount).toLocaleString('en-IN')}</strong></span><span>Your payable <strong>₹{Number(x.seller_payable).toLocaleString('en-IN')}</strong></span></div>{x.status==='paid'&&<small>Paid date: {x.paid_at?new Date(x.paid_at).toLocaleDateString('en-IN'):'—'} · Reference: {x.payment_reference||'Not provided'}</small>}</article>)}</div>}
+            <p className="seller-footnote">Only delivered fulfilments appear here. PUASH commission is deducted from item sales; delivery charges are not included. Actual bank transfer is handled separately.</p>
+          </section>
           <section className="seller-panel seller-orders-panel"><div className="seller-form-heading"><div><span className="seller-kicker">SELLER ORDERS</span><h2><Package size={20}/> Orders for my products</h2></div><button type="button" className="seller-refresh" onClick={loadSellerOrders} disabled={ordersBusy}><RefreshCw size={15}/> Refresh</button></div>
             {ordersError&&<div className="seller-error" role="alert">{ordersError}</div>}
             {ordersBusy?<p className="seller-footnote">Loading orders…</p>:sellerOrders.length===0?<p className="seller-footnote">Abhi aapke products ka koi order nahi aaya.</p>:sellerOrders.map(order=>{const address=order.delivery_address||{};const addressText=typeof address==='string'?address:[address.full_name,address.phone,address.line1,address.line2,address.city,address.district,address.state,address.postal_code].filter(Boolean).join(', ');return <article className="seller-order-card" key={order.order_id}><div className="seller-order-top"><strong>Order #{order.order_id.slice(0,8).toUpperCase()}</strong><span className={'seller-order-status '+order.order_status}>{order.order_status}</span></div><small>{new Date(order.order_created_at).toLocaleString('en-IN')}</small><div className="seller-order-items">{(order.seller_items||[]).map((item,i)=><div key={i}><span>{item.product_name}{item.variant_label?' · '+item.variant_label:''} × {item.quantity}</span><strong>₹{(Number(item.unit_price)*Number(item.quantity)).toLocaleString('en-IN')}</strong></div>)}</div><div className="seller-order-total"><span>Your item subtotal</span><strong>₹{Number(order.seller_subtotal).toLocaleString('en-IN')}</strong></div>{addressText&&<p className="seller-order-address"><strong>Delivery details:</strong> {addressText}</p>}<div className="seller-order-actions"><label>Update fulfilment status<select value={order.order_status} onChange={e=>void updateSellerOrderStatus(order.fulfillment_id,e.target.value)}><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="processing">Processing</option><option value="shipped">Shipped</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select></label></div></article>})}
