@@ -85,23 +85,25 @@ export default function Seller() {
     event.preventDefault();
     if(!application || application.status!=='approved' || productBusy) return;
     const price=Number(productForm.price), mrp=productForm.compare_at_price===''?null:Number(productForm.compare_at_price), stock=Number(productForm.stock_quantity);
-    if(!productForm.name.trim() || !Number.isFinite(price) || price<=0 || !Number.isInteger(stock) || stock<0 || (mrp!==null && (!Number.isFinite(mrp)||mrp<price))){setProductError('Name, valid price, stock aur MRP (selling price se kam nahi) check karein.');return;}
-    let imageUrl:string|null=null;
-    if(productForm.image_url.trim()){
-      try{const url=new URL(productForm.image_url.trim());if(!['https:','http:'].includes(url.protocol))throw new Error();imageUrl=url.toString();}
-      catch{setProductError('Image ke liye valid http/https URL dein.');return;}
-    }
+    if(!productForm.name.trim() || !Number.isFinite(price) || price<=0 || !Number.isInteger(stock) || stock<0 || (mrp!==null && (!Number.isFinite(mrp)||mrp<price))){setProductError('Name, valid price, stock aur MRP check karein.');return;}
+    let imageUrl:string|null=productForm.image_url.trim()||null;
+    if(imageUrl){try{const url=new URL(imageUrl);if(!['https:','http:'].includes(url.protocol))throw new Error();imageUrl=url.toString();}catch{setProductError('Valid image URL dein.');return;}}
     setProductBusy(true);setProductError('');setProductMessage('');
-    const slug=productForm.name.trim().toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')+'-'+crypto.randomUUID().slice(0,8);
-    const {error:saveError}=await supabase.from('products').insert({
-      seller_application_id:application.id,category_id:productForm.category_id||null,
-      name:productForm.name.trim(),slug,description:productForm.description.trim()||null,
-      price,compare_at_price:mrp,image_url:imageUrl,stock_quantity:stock,is_active:false
-    });
+    if(imageFile){
+      if(!['image/jpeg','image/png','image/webp'].includes(imageFile.type)||imageFile.size>5*1024*1024){setProductBusy(false);setProductError('JPG, PNG ya WebP image upload karein (maximum 5 MB).');return;}
+      const ext=imageFile.type==='image/png'?'png':imageFile.type==='image/webp'?'webp':'jpg';
+      const path='seller/'+user.id+'/'+crypto.randomUUID()+'.'+ext;
+      const {error:uploadError}=await supabase.storage.from('product-images').upload(path,imageFile,{contentType:imageFile.type,upsert:false});
+      if(uploadError){setProductBusy(false);setProductError('Image upload nahi hui: '+uploadError.message);return;}
+      imageUrl=supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl;
+    }
+    const slug=productForm.name.trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')+'-'+crypto.randomUUID().slice(0,8);
+    const payload={category_id:productForm.category_id||null,name:productForm.name.trim(),description:productForm.description.trim()||null,price,compare_at_price:mrp,image_url:imageUrl,stock_quantity:stock,is_active:false};
+    const result=editingProduct?await supabase.from('products').update(payload).eq('id',editingProduct).eq('seller_application_id',application.id).eq('is_active',false):await supabase.from('products').insert({...payload,seller_application_id:application.id,slug});
     setProductBusy(false);
-    if(saveError){setProductError('Product save nahi hua: '+saveError.message);return;}
+    if(result.error){setProductError('Product save nahi hua: '+result.error.message);return;}
     setProductForm({name:'',description:'',price:'',compare_at_price:'',stock_quantity:'1',image_url:'',category_id:''});setImageFile(null);setEditingProduct(null);
-    setProductMessage('Product admin review ke liye submit ho gaya. Approval se pehle storefront par visible nahi hoga.');
+    setProductMessage('Product draft save ho gaya. Admin approval se pehle storefront par visible nahi hoga.');
     await loadSellerProducts();
   };
 
