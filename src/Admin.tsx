@@ -6,6 +6,7 @@ type Category = { id: string; name: string };
 type OrderItem = { id: string; product_name: string; unit_price: number; quantity: number };
 type Order = { id: string; user_id: string; status: string; total_amount: number; subtotal_amount: number | null; delivery_fee: number; payment_method: string; shipping_address: any; customer_note: string | null; created_at: string; coupon_code: string | null; discount_amount: number; courier_name: string | null; tracking_number: string | null; shipped_at: string | null; delivered_at: string | null; order_items: OrderItem[] };
 type Customer = { customer_id: string; email: string | null; full_name: string | null; joined_at: string; order_count: number; delivered_spend: number };
+type StockMovement = { id:string; product_id:string|null; product_name:string; previous_stock:number; new_stock:number; change_quantity:number; movement_type:string; actor_id:string|null; created_at:string };
 type Coupon = { id:string; code:string; discount_type:'percentage'|'fixed'; discount_value:number; min_order_amount:number; max_discount:number|null; starts_at:string|null; expires_at:string|null; usage_limit:number|null; per_user_limit:number; usage_count:number; is_active:boolean };
 type ReturnRequest = { id: string; order_id: string; user_id: string; reason: string; details: string | null; status: string; admin_note: string | null; requested_at: string; orders?: { total_amount: number; shipping_address: any } | null };
 type Product = {
@@ -34,6 +35,9 @@ export default function Admin() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [returnRequests, setReturnRequests] = useState<ReturnRequest[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
+  const [stockDrafts, setStockDrafts] = useState<Record<string,string>>({});
+  const [stockHistoryBusy, setStockHistoryBusy] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [couponType, setCouponType] = useState<'percentage'|'fixed'>('percentage');
   const [couponValue, setCouponValue] = useState('10');
@@ -46,7 +50,7 @@ export default function Admin() {
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [customerLoading, setCustomerLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'sales' | 'products' | 'orders' | 'customers' | 'returns' | 'coupons'>('sales');
+  const [activeTab, setActiveTab] = useState<'sales' | 'products' | 'orders' | 'customers' | 'returns' | 'coupons' | 'inventory'>('sales');
   const [orderBusy, setOrderBusy] = useState<string | null>(null);
   const [shippingDrafts, setShippingDrafts] = useState<Record<string, { courier: string; tracking: string }>>({});
   const [productSearch, setProductSearch] = useState('');
@@ -144,6 +148,33 @@ export default function Admin() {
       .order('created_at', { ascending: false });
     if (error) setMessage('Orders load nahi hue: ' + error.message);
     else setOrders((data || []) as Order[]);
+  };
+
+  const loadStockMovements = async () => {
+    setStockHistoryBusy(true);
+    const {data,error}=await supabase.from('stock_movements')
+      .select('id,product_id,product_name,previous_stock,new_stock,change_quantity,movement_type,actor_id,created_at')
+      .order('created_at',{ascending:false}).limit(100);
+    if(error) setMessage('Stock history load nahi hui: '+error.message);
+    else setStockMovements((data||[]) as StockMovement[]);
+    setStockHistoryBusy(false);
+  };
+
+  const setStockLevel = async (product:Product) => {
+    const raw=stockDrafts[product.id];
+    const next=Number(raw);
+    if(raw===undefined || !Number.isInteger(next) || next<0 || next>1000000) {setMessage('Stock 0 se 10,00,000 ke beech whole number hona chahiye.');return;}
+    if(next===product.stock_quantity) {setMessage('Stock mein koi change nahi hai.');return;}
+    setOrderBusy(product.id);setMessage('');
+    const {error}=await supabase.from('products').update({stock_quantity:next,updated_at:new Date().toISOString()}).eq('id',product.id);
+    setOrderBusy(null);
+    if(error) setMessage('Stock update nahi hua: '+error.message);
+    else {
+      setProducts(current=>current.map(item=>item.id===product.id?{...item,stock_quantity:next}:item));
+      setStockDrafts(current=>({...current,[product.id]:String(next)}));
+      setMessage(product.name+' ka stock update ho gaya.');
+      await loadStockMovements();
+    }
   };
 
   const loadCoupons = async () => {
@@ -376,7 +407,7 @@ export default function Admin() {
     <header className="admin-header"><a href="/" className="admin-brand"><span>PUASH.</span><small>ADMIN</small></a><button className="admin-logout" onClick={()=>supabase.auth.signOut()}><LogOut size={16}/> Sign out</button></header>
     <main className="admin-main">
       <div className="admin-title-row"><div><div className="admin-kicker">STORE CONTROL</div><h1>{activeTab === 'sales' ? 'Sales dashboard' : activeTab === 'products' ? 'Products' : 'Orders'}</h1><p>{activeTab === 'sales' ? 'Your store performance at a glance.' : activeTab === 'products' ? 'Add, edit and publish products on your PUASH store.' : 'Review customer orders and update their fulfilment status.'}</p></div><button className="admin-refresh" onClick={() => { loadData(); loadOrders(); }}><RefreshCw size={16}/> Refresh</button></div>
-      <nav className="admin-tabs"><button className={activeTab === 'sales' ? 'active' : ''} onClick={() => setActiveTab('sales')}><BarChart3 size={16}/> Dashboard</button><button className={activeTab === 'products' ? 'active' : ''} onClick={() => setActiveTab('products')}><Package size={16}/> Products <span>{products.length}</span></button><button className={activeTab === 'orders' ? 'active' : ''} onClick={() => setActiveTab('orders')}><ClipboardList size={16}/> Orders <span>{genuineOrders.length}</span></button><button className={activeTab === 'customers' ? 'active' : ''} onClick={() => { setActiveTab('customers'); loadCustomers(); }}><Users size={16}/> Customers <span>{customers.length}</span></button><button className={activeTab === 'returns' ? 'active' : ''} onClick={() => { setActiveTab('returns'); loadReturnRequests(); }}><RefreshCw size={16}/> Returns <span>{returnRequests.filter(item=>item.status==='pending').length}</span></button><button className={activeTab === 'coupons' ? 'active' : ''} onClick={() => { setActiveTab('coupons'); loadCoupons(); }}><Save size={16}/> Coupons <span>{coupons.filter(c=>c.is_active).length}</span></button></nav>
+      <nav className="admin-tabs"><button className={activeTab === 'sales' ? 'active' : ''} onClick={() => setActiveTab('sales')}><BarChart3 size={16}/> Dashboard</button><button className={activeTab === 'products' ? 'active' : ''} onClick={() => setActiveTab('products')}><Package size={16}/> Products <span>{products.length}</span></button><button className={activeTab === 'orders' ? 'active' : ''} onClick={() => setActiveTab('orders')}><ClipboardList size={16}/> Orders <span>{genuineOrders.length}</span></button><button className={activeTab === 'customers' ? 'active' : ''} onClick={() => { setActiveTab('customers'); loadCustomers(); }}><Users size={16}/> Customers <span>{customers.length}</span></button><button className={activeTab === 'returns' ? 'active' : ''} onClick={() => { setActiveTab('returns'); loadReturnRequests(); }}><RefreshCw size={16}/> Returns <span>{returnRequests.filter(item=>item.status==='pending').length}</span></button><button className={activeTab === 'coupons' ? 'active' : ''} onClick={() => { setActiveTab('coupons'); loadCoupons(); }}><Save size={16}/> Coupons <span>{coupons.filter(c=>c.is_active).length}</span></button><button className={activeTab === 'inventory' ? 'active' : ''} onClick={() => { setActiveTab('inventory'); loadStockMovements(); }}><ClipboardList size={16}/> Inventory <span>{products.filter(p=>p.is_active && p.stock_quantity<=5).length}</span></button></nav>
       {message && <div className="admin-message">{message}<button onClick={()=>setMessage('')}><X size={14}/></button></div>}
       {activeTab === 'sales' ? <section className="admin-sales-dashboard">
         <div className="admin-sales-note">Figures exclude internal test orders. Sales total below counts delivered orders only.</div>
@@ -443,6 +474,34 @@ export default function Admin() {
           </article>)}</div>}
       </section>
     
+      </> : activeTab === 'inventory' ? <>
+        <section className="admin-panel">
+          <div className="admin-panel-heading"><div><span className="admin-panel-icon"><Package size={17}/></span><strong>Inventory overview</strong></div><button className="admin-link" onClick={()=>{loadData();loadStockMovements();}}><RefreshCw size={13}/> Refresh</button></div>
+          <div className="inventory-summary">
+            <article><small>Active products</small><strong>{products.filter(p=>p.is_active).length}</strong></article>
+            <article><small>Low stock (1–5)</small><strong>{products.filter(p=>p.is_active&&p.stock_quantity>0&&p.stock_quantity<=5).length}</strong></article>
+            <article><small>Out of stock</small><strong>{products.filter(p=>p.is_active&&p.stock_quantity===0).length}</strong></article>
+            <article><small>Total units</small><strong>{products.filter(p=>p.is_active).reduce((sum,p)=>sum+p.stock_quantity,0)}</strong></article>
+          </div>
+          <p className="admin-shipping-help">Stock changes made here, in product edits, and during customer orders are automatically recorded in the movement history.</p>
+          <div className="inventory-stock-list">
+            {products.filter(p=>p.is_active).sort((a,b)=>a.stock_quantity-b.stock_quantity).map(p=><article className="inventory-stock-row" key={p.id}>
+              <div className="inventory-product"><strong>{p.name}</strong><small>{p.categories?.name||'Uncategorised'}</small></div>
+              <span className={p.stock_quantity===0?'inventory-out':p.stock_quantity<=5?'inventory-low':'inventory-ok'}>{p.stock_quantity===0?'Out of stock':p.stock_quantity<=5?'Low stock':'In stock'} · {p.stock_quantity}</span>
+              <div className="inventory-set-stock"><input aria-label={'Set stock for '+p.name} type="number" min="0" max="1000000" step="1" value={stockDrafts[p.id]??String(p.stock_quantity)} onChange={e=>setStockDrafts(current=>({...current,[p.id]:e.target.value}))}/><button disabled={orderBusy===p.id} onClick={()=>setStockLevel(p)}>{orderBusy===p.id?'Saving…':'Set stock'}</button></div>
+            </article>)}
+            {products.filter(p=>p.is_active).length===0&&<div className="admin-empty">No active products.</div>}
+          </div>
+        </section>
+        <section className="admin-panel">
+          <div className="admin-panel-heading"><div><span className="admin-panel-icon"><RefreshCw size={17}/></span><strong>Stock movement history</strong></div><button className="admin-link" onClick={loadStockMovements}><RefreshCw size={13}/> Refresh</button></div>
+          <p className="admin-shipping-help">Latest 100 stock changes. Older activity is retained in the database.</p>
+          {stockHistoryBusy?<div className="admin-empty">Loading stock history…</div>:stockMovements.length===0?<div className="admin-empty">No stock movements recorded yet. New stock changes will appear here.</div>:<div className="inventory-history">{stockMovements.map(m=><article className="inventory-history-row" key={m.id}>
+            <div><strong>{m.product_name}</strong><small>{new Date(m.created_at).toLocaleString('en-IN')}</small></div>
+            <span className={m.change_quantity>0?'inventory-increase':'inventory-decrease'}>{m.change_quantity>0?'+':''}{m.change_quantity} units</span>
+            <small>{m.previous_stock} → {m.new_stock}</small>
+          </article>)}</div>}
+        </section>
       </> : activeTab === 'coupons' ? <section className="admin-panel">
         <div className="admin-panel-heading"><div><span className="admin-panel-icon"><Save size={17}/></span><strong>Coupons & discounts</strong></div><button className="admin-link" onClick={loadCoupons}><RefreshCw size={13}/> Refresh</button></div>
         <form className="admin-coupon-form" onSubmit={createCoupon}>
