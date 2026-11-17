@@ -5,7 +5,7 @@ import { validateProductPublishing } from './utils/product-publishing.js';
 import { isGalleryWithinLimit } from './utils/gallery-validation.js';
 import { FormEvent, useEffect, useState } from 'react';
 import { supabase } from './supabase';
-import { ArrowLeft, BarChart3, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X, AlertTriangle, TrendingUp, Users, UserRound, ChevronDown, ChevronUp, Download, Activity, Truck } from 'lucide-react';
+import { ArrowLeft, BarChart3, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X, AlertTriangle, TrendingUp, Users, UserRound, ChevronDown, ChevronUp, Download, Activity, Truck, Store } from 'lucide-react';
 
 type Category = { id: string; name: string };
 type OrderItem = { id: string; product_id?: string | null; product_name: string; unit_price: number; quantity: number };
