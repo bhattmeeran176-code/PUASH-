@@ -6,14 +6,14 @@ export type PostalCodeParseResult = {
 };
 
 export function parsePostalCodes(value: string): PostalCodeParseResult {
-  const entries = value.split(/[\\s,;]+/).map(pin => pin.trim()).filter(Boolean);
+  const entries = value.split(/[\s,;]+/).map(pin => pin.trim()).filter(Boolean);
   const postalCodes: string[] = [];
   const invalid: string[] = [];
   const seen = new Set<string>();
   let duplicates = 0;
 
   for (const pin of entries) {
-    if (!/^\\d{6}$/.test(pin)) {
+    if (!/^\d{6}$/.test(pin)) {
       invalid.push(pin);
       continue;
     }
