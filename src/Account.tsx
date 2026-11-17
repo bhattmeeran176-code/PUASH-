@@ -22,6 +22,7 @@ type CustomerOrder = {
 };
 
 type CustomerSellerFulfillment = {order_id:string;shop_name:string;fulfillment_status:string;seller_subtotal:number;updated_at:string};
+type CustomerRefundStatus = {order_id:string;shop_name:string;status:string;refund_amount:number|null;created_at:string;processed_at:string|null};
 
 type Address = {
   id: string;
@@ -61,6 +62,7 @@ export default function Account() {
   const [recentProducts, setRecentProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [sellerFulfillments,setSellerFulfillments]=useState<CustomerSellerFulfillment[]>([]);
+  const [refundStatuses,setRefundStatuses]=useState<CustomerRefundStatus[]>([]);
   const ordersRef = useRef<CustomerOrder[]>([]);
   const [ordersBusy, setOrdersBusy] = useState(false);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
@@ -124,7 +126,7 @@ export default function Account() {
       ordersRef.current = (orderData || []) as CustomerOrder[];
       setOrders(ordersRef.current);
       const orderIds=ordersRef.current.map(order=>order.id);
-      if(orderIds.length){const {data:fulfillmentData,error:fulfillmentError}=await supabase.rpc('customer_order_fulfillments',{p_order_ids:orderIds});if(fulfillmentError)setError('Seller delivery updates load nahi huye: '+fulfillmentError.message);else setSellerFulfillments((fulfillmentData||[]) as CustomerSellerFulfillment[]);}else setSellerFulfillments([]);
+      if(orderIds.length){const [{data:fulfillmentData,error:fulfillmentError},{data:refundData,error:refundError}]=await Promise.all([supabase.rpc('customer_order_fulfillments',{p_order_ids:orderIds}),supabase.rpc('customer_order_refund_statuses',{p_order_ids:orderIds})]);if(fulfillmentError)setError('Seller delivery updates load nahi huye: '+fulfillmentError.message);else setSellerFulfillments((fulfillmentData||[]) as CustomerSellerFulfillment[]);if(refundError)setError('Refund updates load nahi huye: '+refundError.message);else setRefundStatuses((refundData||[]) as CustomerRefundStatus[]);}else {setSellerFulfillments([]);setRefundStatuses([]);}
     } else {
       setAddresses([]);
       setNotifications([]);
@@ -132,6 +134,7 @@ export default function Account() {
       ordersRef.current = [];
       setOrders([]);
       setSellerFulfillments([]);
+      setRefundStatuses([]);
     }
     setReady(true);
   };
@@ -414,8 +417,8 @@ export default function Account() {
               else {
                 ordersRef.current = (data||[]) as CustomerOrder[]; setOrders(ordersRef.current);
                 const orderIds=ordersRef.current.map(order=>order.id);
-                if(orderIds.length){const {data:fulfillmentData,error:fulfillmentError}=await supabase.rpc('customer_order_fulfillments',{p_order_ids:orderIds});if(fulfillmentError)setError('Seller delivery updates refresh nahi huye: '+fulfillmentError.message);else setSellerFulfillments((fulfillmentData||[]) as CustomerSellerFulfillment[]);}
-                else setSellerFulfillments([]);
+                if(orderIds.length){const [{data:fulfillmentData,error:fulfillmentError},{data:refundData,error:refundError}]=await Promise.all([supabase.rpc('customer_order_fulfillments',{p_order_ids:orderIds}),supabase.rpc('customer_order_refund_statuses',{p_order_ids:orderIds})]);if(fulfillmentError)setError('Seller delivery updates refresh nahi huye: '+fulfillmentError.message);else setSellerFulfillments((fulfillmentData||[]) as CustomerSellerFulfillment[]);if(refundError)setError('Refund updates refresh nahi huye: '+refundError.message);else setRefundStatuses((refundData||[]) as CustomerRefundStatus[]);}
+                else {setSellerFulfillments([]);setRefundStatuses([]);}
               }
               setOrdersBusy(false);
             }}><RefreshCw size={14}/> Refresh</button>
@@ -428,7 +431,7 @@ export default function Account() {
               const current=steps.indexOf(order.status);
               return <article className="customer-order-card" key={order.id}>
                 <div className="customer-order-top"><div><strong>Order #{order.id.slice(0,8).toUpperCase()}</strong><small>{new Date(order.created_at).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'})}</small></div><span className={'customer-order-status status-'+order.status}>{labels[order.status]||order.status}</span></div>
-                {sellerFulfillments.filter(item=>item.order_id===order.id).length>0&&<section className="customer-seller-tracking"><strong><Package size={15}/> Seller-wise fulfilment</strong>{sellerFulfillments.filter(item=>item.order_id===order.id).map(item=><div className="customer-seller-tracking-row" key={item.order_id+'-'+item.shop_name}><div><b>{item.shop_name}</b><small>Seller item subtotal · ₹{Number(item.seller_subtotal).toLocaleString('en-IN')}</small></div><span className={'customer-order-status status-'+item.fulfillment_status}>{item.fulfillment_status.replace(/_/g,' ')}</span></div>)}</section>}
+                {refundStatuses.filter(item=>item.order_id===order.id).length>0&&<section className="customer-seller-tracking customer-refund-status"><strong>Refund updates</strong>{refundStatuses.filter(item=>item.order_id===order.id).map((item,index)=><div className="customer-seller-tracking-row" key={item.order_id+'-refund-'+index}><div><b>{item.shop_name}</b><small>{item.refund_amount===null?'Amount under review':'Refund amount · ₹'+Number(item.refund_amount).toLocaleString('en-IN')}{item.processed_at?' · Updated '+new Date(item.processed_at).toLocaleDateString('en-IN'):''}</small></div><span className={'customer-order-status status-'+item.status}>{item.status.replace(/_/g,' ')}</span></div>)}</section>}{sellerFulfillments.filter(item=>item.order_id===order.id).length>0&&<section className="customer-seller-tracking"><strong><Package size={15}/> Seller-wise fulfilment</strong>{sellerFulfillments.filter(item=>item.order_id===order.id).map(item=><div className="customer-seller-tracking-row" key={item.order_id+'-'+item.shop_name}><div><b>{item.shop_name}</b><small>Seller item subtotal · ₹{Number(item.seller_subtotal).toLocaleString('en-IN')}</small></div><span className={'customer-order-status status-'+item.fulfillment_status}>{item.fulfillment_status.replace(/_/g,' ')}</span></div>)}</section>}
                 <div className="customer-order-lines">{(order.order_items||[]).map(item=><div key={item.id}><span>{item.product_name} × {item.quantity}</span><b>₹{(Number(item.unit_price)*item.quantity).toLocaleString('en-IN')}</b></div>)}</div>
                 <div className="customer-order-total"><span>Total · {order.payment_method==='cash_on_delivery'?'Cash on Delivery':order.payment_method}</span><strong>₹{Number(order.total_amount).toLocaleString('en-IN')}</strong></div>
                 {order.status==='cancelled' ? <p className="customer-order-cancelled">This order was cancelled.</p> : <div className="customer-order-progress">{steps.map((step,index)=><div className={current>=index?'done':''} key={step}><span></span><small>{labels[step]}</small></div>)}</div>}
