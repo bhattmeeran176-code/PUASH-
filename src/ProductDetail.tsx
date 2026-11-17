@@ -7,6 +7,7 @@ type ProductInfo = {
   id: string; name: string; description: string; price: number; mrp: number;
   imageUrl: string | null; stock: number; category: string;
 };
+type ProductVariant = { id: string; product_id: string; label: string; price: number | null; stock_quantity: number; };
 type Review = {
   id: string; user_id: string; rating: number; title: string | null;
   body: string; created_at: string;
@@ -18,6 +19,8 @@ export default function ProductDetail() {
   const productId = decodeURIComponent(window.location.pathname.split('/').filter(Boolean)[1] || '');
   const [product, setProduct] = useState<ProductInfo | null>(null);
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [selectedVariantId, setSelectedVariantId] = useState('');
   const [activeImage, setActiveImage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
@@ -79,7 +82,13 @@ export default function ProductDetail() {
         .maybeSingle();
       if (cancelled) return;
       if (!error && data) {
-        const { data: extraImages } = await supabase.from('product_images').select('image_url').eq('product_id', productId).order('sort_order').order('created_at');
+        const [{ data: extraImages }, { data: variantRows }] = await Promise.all([
+          supabase.from('product_images').select('image_url').eq('product_id', productId).order('sort_order').order('created_at'),
+          supabase.from('product_variants').select('id,product_id,label,price,stock_quantity').eq('product_id', productId).eq('is_active', true).order('sort_order').order('created_at'),
+        ]);
+        const liveVariants = (variantRows || []) as ProductVariant[];
+        setVariants(liveVariants);
+        setSelectedVariantId(liveVariants[0]?.id || '');
         const category = Array.isArray(data.categories) ? data.categories[0]?.name : data.categories?.name;
         const viewedProduct = {
           id: data.id, name: data.name,
@@ -107,10 +116,13 @@ export default function ProductDetail() {
   }, [productId]);
 
   const addToCart = () => {
-    if (!product || quantity < 1 || quantity > product.stock) return;
+    const selectedVariant = variants.find(item => item.id === selectedVariantId) || null;
+    const availableStock = selectedVariant ? selectedVariant.stock_quantity : product?.stock || 0;
+    if (!product || (variants.length > 0 && !selectedVariant) || quantity < 1 || quantity > availableStock || availableStock <= 0) return;
     try {
       const current = JSON.parse(localStorage.getItem('puash-cart') || '{}');
-      const next = { ...current, [product.id]: Math.min(product.stock, (Number(current[product.id]) || 0) + quantity) };
+      const cartKey = selectedVariant ? product.id + '::' + selectedVariant.id : product.id;
+      const next = { ...current, [cartKey]: Math.min(availableStock, (Number(current[cartKey]) || 0) + quantity) };
       localStorage.setItem('puash-cart', JSON.stringify(next));
       setMessage('Cart mein add ho gaya!');
     } catch {
@@ -182,12 +194,13 @@ export default function ProductDetail() {
                 <Heart size={16} fill={wishlistSaved ? 'currentColor' : 'none'}/> {wishlistBusy ? 'Saving…' : wishlistSaved ? 'Saved to wishlist' : 'Save to wishlist'}
               </button>
               <div className="detail-review-summary"><span className="detail-review-stars"><Star size={15} fill="currentColor"/> {averageRating ? averageRating.toFixed(1) : 'New'}</span><span>{reviews.length} {reviews.length===1?'review':'reviews'}</span></div>
-              <div className="detail-prices"><strong>{money(product.price)}</strong>{product.mrp > product.price && <><del>{money(product.mrp)}</del><span>{Math.round((1-product.price/product.mrp)*100)}% off</span></>}</div>
-              <div className={product.stock > 0 ? 'detail-availability' : 'detail-availability out'}><span />{product.stock > 0 ? product.stock + ' pieces available' : 'Currently out of stock'}</div>
+              <div className="detail-prices"><strong>{money(variants.find(item => item.id === selectedVariantId)?.price ?? product.price)}</strong>{product.mrp > product.price && <><del>{money(product.mrp)}</del><span>{Math.round((1-product.price/product.mrp)*100)}% off</span></>}</div>
+              {variants.length > 0 && <label className="detail-variant-picker"><span>Choose size / colour / option</span><select value={selectedVariantId} onChange={e=>{setSelectedVariantId(e.target.value);setQuantity(1);}}>{variants.map(variant=><option key={variant.id} value={variant.id} disabled={variant.stock_quantity<=0}>{variant.label}{variant.stock_quantity<=0?' · Out of stock':''}</option>)}</select></label>}
+              <div className={(variants.length ? (variants.find(item=>item.id===selectedVariantId)?.stock_quantity||0) : product.stock) > 0 ? 'detail-availability' : 'detail-availability out'}><span />{(variants.length ? (variants.find(item=>item.id===selectedVariantId)?.stock_quantity||0) : product.stock) > 0 ? (variants.length ? variants.find(item=>item.id===selectedVariantId)?.stock_quantity : product.stock) + ' pieces available' : 'Currently out of stock'}</div>
               <div className="detail-description"><h2>Product description</h2><p>{product.description}</p></div>
               <div className="detail-delivery"><Truck size={18} /><span><strong>Delivery information</strong><small>Delivery options and charges will be shown at checkout.</small></span></div>
-              {product.stock > 0 && <div className="detail-buy-row">
-                <div className="detail-quantity"><button aria-label="Decrease quantity" onClick={() => setQuantity(q => Math.max(1,q-1))}><Minus size={16}/></button><strong>{quantity}</strong><button aria-label="Increase quantity" onClick={() => setQuantity(q => Math.min(product.stock,q+1))}><Plus size={16}/></button></div>
+              {(variants.length ? (variants.find(item=>item.id===selectedVariantId)?.stock_quantity||0) : product.stock) > 0 && <div className="detail-buy-row">
+                <div className="detail-quantity"><button aria-label="Decrease quantity" onClick={() => setQuantity(q => Math.max(1,q-1))}><Minus size={16}/></button><strong>{quantity}</strong><button aria-label="Increase quantity" onClick={() => setQuantity(q => Math.min(variants.length ? (variants.find(item=>item.id===selectedVariantId)?.stock_quantity||0) : product.stock,q+1))}><Plus size={16}/></button></div>
                 <button className="primary-button detail-add-button" onClick={addToCart}><ShoppingBag size={17}/> Add to cart</button>
               </div>}
               {message && <div className="detail-success"><CheckCircle2 size={16}/>{message}</div>}

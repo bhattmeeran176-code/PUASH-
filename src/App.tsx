@@ -24,6 +24,8 @@ import {
   X,
 } from 'lucide-react';
 
+type ProductVariant = { id: string; product_id: string; label: string; price: number | null; stock_quantity: number; };
+type CartLine = Product & { cartKey: string; quantity: number; variantId: string | null; variantLabel: string | null; unitPrice: number; };
 type Product = {
   id: string;
   name: string;
@@ -67,6 +69,7 @@ const rememberViewedProduct = (product: Product) => {
 function App() {
   const [category, setCategory] = useState('All');
   const [products, setProducts] = useState<Product[]>([]);
+  const [productVariants, setProductVariants] = useState<ProductVariant[]>([]);
   const [categories, setCategories] = useState(sampleCategories);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('featured');
@@ -143,7 +146,7 @@ function App() {
   useEffect(() => {
     let cancelled = false;
     async function loadStoreData() {
-      const [productResult, categoryResult, reviewResult] = await Promise.all([
+      const [productResult, categoryResult, reviewResult, variantResult] = await Promise.all([
         supabase
           .from('products')
           .select('id,name,description,price,compare_at_price,image_url,stock_quantity,created_at,categories(name)')
@@ -155,9 +158,11 @@ function App() {
           .eq('is_active', true)
           .order('name'),
         supabase.from('product_reviews').select('product_id,rating'),
+        supabase.from('product_variants').select('id,product_id,label,price,stock_quantity').eq('is_active', true).order('sort_order').order('created_at'),
       ]);
 
       if (cancelled) return;
+      if (!variantResult.error) setProductVariants((variantResult.data || []) as ProductVariant[]);
       if (productResult.error) {
         console.warn('PUASH products could not be loaded:', productResult.error.message);
         setProducts([]);
@@ -188,7 +193,7 @@ function App() {
             tone: 'cream',
             description: row.description || 'Discover this product on PUASH.',
             imageUrl: row.image_url || null,
-            stock: Number(row.stock_quantity || 0),
+            stock: (variantResult.data || []).some((v: any) => v.product_id === row.id) ? (variantResult.data || []).filter((v: any) => v.product_id === row.id && v.is_active !== false).reduce((sum: number, v: any) => sum + Number(v.stock_quantity || 0), 0) : Number(row.stock_quantity || 0),
             createdAt: row.created_at || null,
           };
         });
@@ -243,37 +248,43 @@ function App() {
     return list;
   }, [category, search, sort, products, minPrice, maxPrice, minRating, savedOnly, wishlist]);
 
-  const cartItems = products.filter(product => (cart[product.id] || 0) > 0);
-  const cartCount = Object.values(cart).reduce(
-    (sum, quantity) => sum + quantity,
-    0
-  );
-  const subtotal = cartItems.reduce(
-    (sum, product) => sum + product.price * cart[product.id],
-    0
-  );
+  const cartItems: CartLine[] = Object.entries(cart).flatMap(([cartKey, quantity]) => {
+    if (!quantity) return [];
+    const [productId, variantId] = cartKey.split('::');
+    const product = products.find(item => item.id === productId);
+    if (!product) return [];
+    const variant = variantId ? productVariants.find(item => item.id === variantId && item.product_id === productId) : null;
+    return [{ ...product, cartKey, quantity, variantId: variant?.id || null, variantLabel: variant?.label || null, unitPrice: variant?.price ?? product.price, stock: variant ? variant.stock_quantity : product.stock }];
+  });
+  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const subtotal = cartItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
   const delivery = subtotal === 0 || subtotal >= 999 ? 0 : 49;
   const total = Math.max(0, subtotal + delivery - (appliedCoupon?.discount_amount || 0));
 
   const addToCart = (product: Product) => {
-    const currentQuantity = cart[product.id] || 0;
+    if (productVariants.some(variant => variant.product_id === product.id)) {
+      window.location.href = '/product/' + product.id;
+      return;
+    }
+    const key = product.id;
+    const currentQuantity = cart[key] || 0;
     if (product.stock <= currentQuantity) {
       setToast(product.stock <= 0 ? 'Ye product abhi out of stock hai' : 'Available stock se zyada quantity add nahi kar sakte');
       return;
     }
-    setCart(current => ({ ...current, [product.id]: (current[product.id] || 0) + 1 }));
+    setCart(current => ({ ...current, [key]: (current[key] || 0) + 1 }));
     setToast(product.name + ' added to cart');
   };
 
-  const changeQuantity = (id: string, amount: number) => {
+  const changeQuantity = (cartKey: string, amount: number) => {
     setCart(current => {
       const next = { ...current };
-      const quantity = (next[id] || 0) + amount;
-      if (quantity <= 0) delete next[id];
+      const quantity = (next[cartKey] || 0) + amount;
+      if (quantity <= 0) delete next[cartKey];
       else {
-        const product = products.find(item => item.id === id);
-        if (product && quantity > product.stock) return current;
-        next[id] = quantity;
+        const line = cartItems.find(item => item.cartKey === cartKey);
+        if (line && quantity > line.stock) return current;
+        next[cartKey] = quantity;
       }
       return next;
     });
@@ -286,7 +297,7 @@ function App() {
       setCartOpen(true);
       return;
     }
-    const unavailable = cartItems.find(item => (cart[item.id] || 0) > item.stock || item.stock <= 0);
+    const unavailable = cartItems.find(item => item.quantity > item.stock || item.stock <= 0);
     if (unavailable) {
       setToast(unavailable.name + ' ka available stock kam hai. Cart quantity update karein.');
       return;
@@ -340,9 +351,10 @@ function App() {
     setCheckoutError('');
     const { data, error } = await supabase.rpc('place_customer_order', {
       p_address_id: selectedAddressId,
-      p_items: cartItems.map(product => ({
-        product_id: product.id,
-        quantity: cart[product.id],
+      p_items: cartItems.map(item => ({
+        product_id: item.id,
+        variant_id: item.variantId,
+        quantity: item.quantity,
       })),
       p_customer_note: null,
       p_coupon_code: appliedCoupon?.code || null,
@@ -874,33 +886,33 @@ function App() {
               <>
                 <div className="cart-items">
                   {cartItems.map(product => (
-                    <div className="cart-item" key={product.id}>
+                    <div className="cart-item" key={product.cartKey}>
                       <div className={'cart-item-art tone-' + product.tone}>
                         {product.imageUrl ? <img src={product.imageUrl} alt={product.name} /> : product.emoji}
                       </div>
                       <div className="cart-item-details">
                         <strong>{product.name}</strong>
-                        <small>{money(product.price)} each</small>
+                        <small>{money(product.unitPrice)} each</small>{product.variantLabel && <small>Option: {product.variantLabel}</small>}
                         <small className={product.stock <= 0 ? 'cart-stock-out' : 'cart-stock-note'}>{product.stock <= 0 ? 'Out of stock' : product.stock + ' available'}</small>
                         <div className="quantity-control">
                           <button
-                            onClick={() => changeQuantity(product.id, -1)}
+                            onClick={() => changeQuantity(product.cartKey, -1)}
                             aria-label="Decrease quantity"
                           >
                             <Minus size={13} />
                           </button>
-                          <span>{cart[product.id]}</span>
+                          <span>{product.quantity}</span>
                           <button
-                            onClick={() => changeQuantity(product.id, 1)}
+                            onClick={() => changeQuantity(product.cartKey, 1)}
                             aria-label="Increase quantity"
-                            disabled={(cart[product.id] || 0) >= product.stock}
+                            disabled={product.quantity >= product.stock}
                           >
                             <Plus size={13} />
                           </button>
                         </div>
                       </div>
                       <strong className="cart-line-price">
-                        {money(product.price * cart[product.id])}
+                        {money(product.unitPrice * product.quantity)}
                       </strong>
                     </div>
                   ))}
