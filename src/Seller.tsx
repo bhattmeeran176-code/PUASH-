@@ -16,7 +16,7 @@ type SellerApplication = {
   status: 'pending' | 'approved' | 'rejected';
   admin_note: string | null;
 };
-type SellerOrder = { order_id:string; order_status:string; order_created_at:string; seller_subtotal:number; delivery_address:any; seller_items:{product_name:string;quantity:number;unit_price:number;variant_label:string|null}[] };
+type SellerOrder = { fulfillment_id:string; order_id:string; order_status:string; order_created_at:string; seller_subtotal:number; delivery_address:any; seller_items:{product_name:string;quantity:number;unit_price:number;variant_label:string|null}[] };
 type SellerProduct = { id:string; name:string; description:string|null; price:number; compare_at_price:number|null; stock_quantity:number; image_url:string|null; is_active:boolean; created_at:string };
 
 const emptyForm = {
@@ -74,7 +74,21 @@ export default function Seller() {
     return () => { alive = false; listener.subscription.unsubscribe(); };
   }, []);
 
-  const loadSellerOrders = async () => {\n    setOrdersBusy(true);setOrdersError('');\n    const {data,error}=await supabase.rpc('seller_order_dashboard');\n    if(error)setOrdersError('Orders load nahi hue: '+error.message);\n    else setSellerOrders((data||[]) as SellerOrder[]);\n    setOrdersBusy(false);\n  };\n\n  const loadSellerProducts = async () => {
+  const updateSellerOrderStatus = async (fulfillmentId:string,status:string) => {
+    const {error}=await supabase.rpc('update_seller_fulfillment_status',{p_fulfillment_id:fulfillmentId,p_status:status});
+    if(error){setOrdersError('Order status update nahi hua: '+error.message);return;}
+    await loadSellerOrders();
+  };
+  const loadSellerOrders = async () => {
+    setOrdersBusy(true);
+    setOrdersError('');
+    const {data,error}=await supabase.rpc('seller_order_dashboard');
+    if(error) setOrdersError('Orders load nahi hue: '+error.message);
+    else setSellerOrders((data||[]) as SellerOrder[]);
+    setOrdersBusy(false);
+  };
+
+  const loadSellerProducts = async () => {
     if (!application) return;
     const [{data:items,error:itemsError},{data:cats}] = await Promise.all([
       supabase.from('products').select('id,name,description,price,compare_at_price,stock_quantity,image_url,is_active,created_at').eq('seller_application_id',application.id).order('created_at',{ascending:false}),
@@ -176,7 +190,7 @@ export default function Seller() {
           </form>
           <section className="seller-panel seller-orders-panel"><div className="seller-form-heading"><div><span className="seller-kicker">SELLER ORDERS</span><h2><Package size={20}/> Orders for my products</h2></div><button type="button" className="seller-refresh" onClick={loadSellerOrders} disabled={ordersBusy}><RefreshCw size={15}/> Refresh</button></div>
             {ordersError&&<div className="seller-error" role="alert">{ordersError}</div>}
-            {ordersBusy?<p className="seller-footnote">Loading orders…</p>:sellerOrders.length===0?<p className="seller-footnote">Abhi aapke products ka koi order nahi aaya.</p>:sellerOrders.map(order=>{const address=order.delivery_address||{};const addressText=typeof address==='string'?address:[address.full_name,address.phone,address.line1,address.line2,address.city,address.district,address.state,address.postal_code].filter(Boolean).join(', ');return <article className="seller-order-card" key={order.order_id}><div className="seller-order-top"><strong>Order #{order.order_id.slice(0,8).toUpperCase()}</strong><span className={'seller-order-status '+order.order_status}>{order.order_status}</span></div><small>{new Date(order.order_created_at).toLocaleString('en-IN')}</small><div className="seller-order-items">{(order.seller_items||[]).map((item,i)=><div key={i}><span>{item.product_name}{item.variant_label?' · '+item.variant_label:''} × {item.quantity}</span><strong>₹{(Number(item.unit_price)*Number(item.quantity)).toLocaleString('en-IN')}</strong></div>)}</div><div className="seller-order-total"><span>Your item subtotal</span><strong>₹{Number(order.seller_subtotal).toLocaleString('en-IN')}</strong></div>{addressText&&<p className="seller-order-address"><strong>Delivery details:</strong> {addressText}</p>}</article>})}
+            {ordersBusy?<p className="seller-footnote">Loading orders…</p>:sellerOrders.length===0?<p className="seller-footnote">Abhi aapke products ka koi order nahi aaya.</p>:sellerOrders.map(order=>{const address=order.delivery_address||{};const addressText=typeof address==='string'?address:[address.full_name,address.phone,address.line1,address.line2,address.city,address.district,address.state,address.postal_code].filter(Boolean).join(', ');return <article className="seller-order-card" key={order.order_id}><div className="seller-order-top"><strong>Order #{order.order_id.slice(0,8).toUpperCase()}</strong><span className={'seller-order-status '+order.order_status}>{order.order_status}</span></div><small>{new Date(order.order_created_at).toLocaleString('en-IN')}</small><div className="seller-order-items">{(order.seller_items||[]).map((item,i)=><div key={i}><span>{item.product_name}{item.variant_label?' · '+item.variant_label:''} × {item.quantity}</span><strong>₹{(Number(item.unit_price)*Number(item.quantity)).toLocaleString('en-IN')}</strong></div>)}</div><div className="seller-order-total"><span>Your item subtotal</span><strong>₹{Number(order.seller_subtotal).toLocaleString('en-IN')}</strong></div>{addressText&&<p className="seller-order-address"><strong>Delivery details:</strong> {addressText}</p>}<div className="seller-order-actions"><label>Update fulfilment status<select value={order.order_status} onChange={e=>void updateSellerOrderStatus(order.fulfillment_id,e.target.value)}><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="processing">Processing</option><option value="shipped">Shipped</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select></label></div></article>})}
           </section>
           <section className="seller-panel"><div className="seller-form-heading"><h2><Package size={20}/> My products</h2><button type="button" className="seller-refresh" onClick={loadSellerProducts}><RefreshCw size={15}/> Refresh</button></div>
             {products.length===0?<p className="seller-footnote">Abhi koi product submit nahi hua.</p>:products.map(p=><article className="seller-product-row" key={p.id}>{p.image_url&&<img src={p.image_url} alt="" /> }<div><strong>{p.name}</strong><span>₹{Number(p.price).toLocaleString('en-IN')} · Stock {p.stock_quantity}</span><small>{p.is_active?'Published':'Pending admin review'}</small>{!p.is_active&&<button type="button" className="seller-edit" onClick={()=>{setEditingProduct(p.id);setProductForm({name:p.name,description:p.description||'',price:String(p.price),compare_at_price:p.compare_at_price==null?'':String(p.compare_at_price),stock_quantity:String(p.stock_quantity),image_url:p.image_url||'',category_id:''});setProductMessage('Editing draft: '+p.name);}}>Edit draft</button>}</div></article>)}
