@@ -2961,3 +2961,136 @@ button,input,select { font-family:'Manrope',sans-serif; }
 
 
 .customer-seller-tracking{margin:12px 0;padding:12px;border:1px solid #e4e9df;border-radius:12px;background:#f7f8f3}.customer-seller-tracking>strong{display:flex;align-items:center;gap:7px;color:#36563e;font-size:12px;margin-bottom:9px}.customer-seller-tracking-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid #e6e9e1}.customer-seller-tracking-row>div{min-width:0;display:grid;gap:4px}.customer-seller-tracking-row b{font-size:12px;color:#343d33}.customer-seller-tracking-row small{font-size:10px;color:#77796f}.customer-seller-tracking-row .customer-order-status{white-space:nowrap;font-size:10px}
+
+
+/* PUASH product shelf: refined marketplace card treatment */
+.product-grid {
+  gap: 20px;
+}
+.product-card {
+  border: 1px solid #e8e5dc;
+  border-radius: 13px;
+  box-shadow: 0 2px 8px rgba(38, 49, 39, 0.025);
+  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+}
+.product-card:hover {
+  border-color: #d5dfd4;
+  box-shadow: 0 14px 32px rgba(38, 65, 47, 0.10);
+  transform: translateY(-4px);
+}
+.product-visual {
+  min-height: 0;
+  aspect-ratio: 1 / 1;
+  background: linear-gradient(145deg, #f5f1e8 0%, #ece8dc 100%);
+}
+.product-visual::before {
+  width: 68%;
+  height: 68%;
+  border-color: rgba(49, 91, 72, 0.13);
+}
+.product-photo {
+  object-fit: contain;
+  padding: 12px;
+  mix-blend-mode: multiply;
+  transition: transform 260ms ease;
+}
+.product-card:hover .product-photo {
+  transform: scale(1.045);
+}
+.product-emoji {
+  width: 112px;
+  height: 112px;
+}
+.product-info {
+  padding: 15px 15px 16px;
+}
+.product-category {
+  letter-spacing: 0.14em;
+}
+.product-name {
+  font-size: 12px;
+  line-height: 1.5;
+  min-height: 42px;
+  padding: 7px 0 5px;
+}
+.price-row {
+  min-height: 25px;
+}
+.add-button {
+  min-height: 39px;
+  border-radius: 7px;
+  border-color: #d3dfd3;
+  background: #edf3eb;
+  color: #315b48;
+  transition: background 180ms ease, transform 180ms ease;
+}
+.add-button:hover {
+  background: #e1ebdf;
+  transform: translateY(-1px);
+}
+.wishlist-heart {
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 254, 250, 0.94);
+  backdrop-filter: blur(8px);
+  transition: color 180ms ease, transform 180ms ease, background 180ms ease;
+}
+.wishlist-heart:hover {
+  color: #315b48;
+  transform: scale(1.06);
+}
+.product-tag {
+  color: #315b48;
+  border: 1px solid rgba(49, 91, 72, 0.12);
+  border-radius: 20px;
+  padding: 6px 9px;
+}
+@media (max-width: 640px) {
+  .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 11px;
+  }
+  .product-card {
+    border-radius: 11px;
+  }
+  .product-info {
+    padding: 11px 10px 12px;
+  }
+  .product-name {
+    font-size: 11px;
+    min-height: 40px;
+  }
+  .price-row {
+    gap: 5px;
+    margin-bottom: 10px;
+  }
+  .price-row strong {
+    font-size: 13px;
+  }
+  .add-button {
+    min-height: 37px;
+    font-size: 9px;
+  }
+  .wishlist-heart {
+    width: 32px;
+    height: 32px;
+    right: 8px;
+    top: 8px;
+  }
+  .quick-view {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .product-card,
+  .product-photo,
+  .wishlist-heart,
+  .add-button {
+    transition: none;
+  }
+  .product-card:hover,
+  .add-button:hover,
+  .wishlist-heart:hover {
+    transform: none;
+  }
+}
