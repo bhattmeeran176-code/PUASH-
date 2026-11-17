@@ -319,7 +319,7 @@ function App() {
     }
     const { data, error } = await supabase
       .from('customer_addresses')
-      .select('id,label,full_name,phone,line1,line2,city,state,postal_code,country,is_default')
+      .select('id,label,full_name,phone,line1,line2,city,district,state,postal_code,country,is_default')
       .eq('user_id', authData.user.id)
       .order('is_default', { ascending: false })
       .order('created_at', { ascending: false });
