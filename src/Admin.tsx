@@ -1,4 +1,5 @@
 import { quoteCsvCell } from './utils/csv.js';
+import { parsePostalCodes } from './utils/postal-codes.js';
 import { FormEvent, useEffect, useState } from 'react';
 import { supabase } from './supabase';
 import { ArrowLeft, BarChart3, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X, AlertTriangle, TrendingUp, Users, UserRound, ChevronDown, ChevronUp, Download, Activity, Truck } from 'lucide-react';
@@ -24,9 +25,8 @@ const money = (value: number) => '₹' + Number(value || 0).toLocaleString('en-I
 const slugify = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 const getPostalCodeStats = (value: string) => {
-  const entries = value.split(/[\s,;]+/).map(pin => pin.trim()).filter(Boolean);
-  const valid = entries.filter(pin => /^\d{6}$/.test(pin));
-  return { total: entries.length, unique: new Set(valid).size, duplicates: valid.length - new Set(valid).size, invalid: entries.length - valid.length };
+  const parsed = parsePostalCodes(value);
+  return { total: parsed.total, unique: parsed.postalCodes.length, duplicates: parsed.duplicates, invalid: parsed.invalid.length };
 };
 
 export default function Admin() {
@@ -133,9 +133,10 @@ export default function Admin() {
     if (zone.delivery_fee < 0 || zone.free_delivery_threshold < 0 || zone.min_delivery_days < 0 || zone.max_delivery_days < zone.min_delivery_days) {
       setMessage('Delivery fee, free threshold aur delivery days ki values check karein.'); return;
     }
-    const pins = [...new Set(zone.postal_codes.split(/[\s,;]+/).map(pin=>pin.trim()).filter(Boolean))];
-    if (pins.some(pin=>!/^\d{6}$/.test(pin))) { setMessage('Har PIN code exactly 6 digits ka hona chahiye.'); return; }
-    if (pins.length > 1000) { setMessage('Ek district mein maximum 1000 PIN codes add kar sakte hain.'); return; }
+    const parsedPins = parsePostalCodes(zone.postal_codes);
+    const pins = parsedPins.postalCodes;
+    if (parsedPins.invalid.length) { setMessage('Har PIN code exactly 6 digits ka hona chahiye. Invalid entries: ' + parsedPins.invalid.slice(0,5).join(', ')); return; }
+    if (pins.length > 1000) { setMessage('Ek district mein maximum 1000 unique PIN codes add kar sakte hain.'); return; }
     setOrderBusy(zone.id); setMessage('');
     const { error } = await supabase.from('delivery_zones').update({
       is_serviceable: zone.is_serviceable, delivery_fee: zone.delivery_fee,
