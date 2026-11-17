@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 64">
+<rect width="64" height="64" rx="17" fill="#173c31"/>
+<path d="M11 48 28 19l9 14 8-14 18 29H11Z" fill="none" stroke="#fffaf0" stroke-width="2.8" stroke-linejoin="round"/>
+<path d="M20 48h36M27 48l10-15 10 15" fill="none" stroke="#d9b58e" stroke-width="2.8" stroke-linecap="round"/>
+<circle cx="52" cy="12" r="3.2" fill="#d9b58e"/>
+<text x="79" y="39" font-family="Arial,sans-serif" font-size="31" font-weight="800" letter-spacing="4" fill="#173c31">PUASH</text>
+<circle cx="224" cy="32" r="3" fill="#bd6848"/>
+</svg>

@@ -482,11 +482,16 @@ function App() {
             }}
             aria-label="PUASH home"
           >
-            <span className="wordmark-symbol">
-              <ShoppingBag size={19} strokeWidth={2.4} />
+            <span className="wordmark-symbol" aria-hidden="true">
+              <svg viewBox="0 0 40 40" role="img" focusable="false">
+                <path d="M5 29.5 15.4 13l5.2 8.1L25 14l10 15.5H5Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
+                <path d="M10 29.5h20M14.2 29.5l5.8-9 5.8 9" fill="none" stroke="#D9B58E" strokeWidth="1.8" strokeLinecap="round"/>
+                <circle cx="29.5" cy="9.5" r="2.2" fill="#D9B58E"/>
+              </svg>
             </span>
-            <span>
+            <span className="wordmark-type">
               PUASH<span className="wordmark-dot">.</span>
+              <small>ROOTED IN KASHMIR</small>
             </span>
           </button>
           <div className="delivery-pill">
@@ -587,14 +592,23 @@ function App() {
           </div>
           <div
             className="hero-art"
-            aria-label="Decorative shopping illustration"
+            aria-label="Animated PUASH Kashmir-inspired shopping illustration"
           >
+            <div className="hero-glow" />
             <div className="hero-orbit orbit-one" />
             <div className="hero-orbit orbit-two" />
             <div className="hero-sun" />
+            <div className="hero-mountain mountain-back" />
+            <div className="hero-mountain mountain-front" />
             <div className="hero-bag">
-              <ShoppingBag size={88} strokeWidth={1.2} />
+              <span className="bag-handle" />
+              <svg viewBox="0 0 100 100" aria-hidden="true">
+                <path d="M18 38h64l-5 48H23l-5-48Z" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round"/>
+                <path d="M34 39v-8a16 16 0 0 1 32 0v8" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"/>
+                <path d="m32 62 10 9 25-25" fill="none" stroke="#D9B58E" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
               <span>PUASH</span>
+              <small>MADE FOR EVERYDAY</small>
             </div>
             <div className="floating-card card-one">
               <span>✦</span>
@@ -607,6 +621,9 @@ function App() {
               <small>with care</small>
             </div>
             <div className="hero-flower">✿</div>
+            <span className="hero-spark spark-one">✦</span>
+            <span className="hero-spark spark-two">✧</span>
+            <span className="hero-spark spark-three">✦</span>
           </div>
           <div className="hero-bottom">
             <span>01 / DISCOVER</span>
