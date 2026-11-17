@@ -10,6 +10,7 @@ type ActivityLog = { id:string; actor_id:string|null; actor_name:string; action:
 type StockMovement = { id:string; product_id:string|null; product_name:string; previous_stock:number; new_stock:number; change_quantity:number; movement_type:string; actor_id:string|null; created_at:string };
 type Coupon = { id:string; code:string; discount_type:'percentage'|'fixed'; discount_value:number; min_order_amount:number; max_discount:number|null; starts_at:string|null; expires_at:string|null; usage_limit:number|null; per_user_limit:number; usage_count:number; is_active:boolean };
 type ReturnRequest = { id: string; order_id: string; user_id: string; reason: string; details: string | null; status: string; admin_note: string | null; requested_at: string; orders?: { total_amount: number; shipping_address: any } | null };
+type ProductVariant = { id:string; product_id:string; label:string; price:number|null; stock_quantity:number; is_active:boolean; };
 type Product = {
   id: string; name: string; slug: string; description: string | null;
   price: number; compare_at_price: number | null; image_url: string | null;
@@ -31,6 +32,12 @@ export default function Admin() {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
+  const [managedVariantProduct, setManagedVariantProduct] = useState<string | null>(null);
+  const [managedVariants, setManagedVariants] = useState<ProductVariant[]>([]);
+  const [variantLabel, setVariantLabel] = useState('');
+  const [variantPrice, setVariantPrice] = useState('');
+  const [variantStock, setVariantStock] = useState('0');
+  const [variantBusy, setVariantBusy] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -282,6 +289,41 @@ export default function Admin() {
   };
 
   useEffect(() => { if (isAdmin) { loadData(); loadOrders(); } }, [isAdmin]);
+
+  const openVariantManager = async (productId: string) => {
+    if (managedVariantProduct === productId) { setManagedVariantProduct(null); return; }
+    setManagedVariantProduct(productId); setVariantLabel(''); setVariantPrice(''); setVariantStock('0');
+    const { data, error } = await supabase.from('product_variants').select('id,product_id,label,price,stock_quantity,is_active').eq('product_id', productId).order('sort_order').order('created_at');
+    if (error) { setMessage('Product options load nahi huye: ' + error.message); return; }
+    setManagedVariants((data || []) as ProductVariant[]);
+  };
+
+  const saveVariant = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!managedVariantProduct || !variantLabel.trim() || !Number.isInteger(Number(variantStock)) || Number(variantStock) < 0 || (variantPrice && (!Number.isFinite(Number(variantPrice)) || Number(variantPrice) < 0))) {
+      setMessage('Option label, valid stock aur optional valid price enter karein.'); return;
+    }
+    setVariantBusy(true); setMessage('');
+    const { data, error } = await supabase.from('product_variants').insert({
+      product_id: managedVariantProduct, label: variantLabel.trim(),
+      price: variantPrice.trim() ? Number(variantPrice) : null,
+      stock_quantity: Number(variantStock), sort_order: managedVariants.length,
+    }).select('id,product_id,label,price,stock_quantity,is_active').single();
+    setVariantBusy(false);
+    if (error) { setMessage('Option save nahi hua: ' + error.message); return; }
+    setManagedVariants(current => [...current, data as ProductVariant]);
+    setVariantLabel(''); setVariantPrice(''); setVariantStock('0');
+    setMessage('Product option add ho gaya.');
+  };
+
+  const removeVariant = async (variant: ProductVariant) => {
+    setVariantBusy(true);
+    const { error } = await supabase.from('product_variants').delete().eq('id', variant.id);
+    setVariantBusy(false);
+    if (error) { setMessage('Option remove nahi hua: ' + error.message); return; }
+    setManagedVariants(current => current.filter(item => item.id !== variant.id));
+    setMessage('Product option remove ho gaya.');
+  };
 
   const resetForm = () => {
     setEditing(null); setName(''); setDescription(''); setPrice('');
@@ -576,7 +618,18 @@ export default function Admin() {
               <div className="admin-stock-control"><span className={p.stock_quantity <= 5 ? 'admin-stock-low' : ''}>Stock: {p.stock_quantity}{p.stock_quantity <= 5 ? ' · Low stock' : ''}</span><button disabled={orderBusy===p.id || p.stock_quantity<=0} onClick={()=>adjustStock(p,-1)} aria-label="Decrease stock">−</button><button disabled={orderBusy===p.id} onClick={()=>adjustStock(p,1)} aria-label="Increase stock">+</button></div>
             </div>
             <span className={p.is_active ? 'admin-status live' : 'admin-status'}>{p.is_active ? 'Live' : 'Hidden'}</span>
-            <div className="admin-row-actions"><button onClick={()=>editProduct(p)}>Edit</button><button onClick={()=>toggleActive(p)}>{p.is_active ? 'Hide' : 'Publish'}</button></div>
+            <div className="admin-row-actions"><button onClick={()=>editProduct(p)}>Edit</button><button onClick={()=>openVariantManager(p.id)}>Options</button><button onClick={()=>toggleActive(p)}>{p.is_active ? 'Hide' : 'Publish'}</button></div>
+            {managedVariantProduct === p.id && <div className="admin-variant-manager">
+              <strong>Size / colour options for {p.name}</strong>
+              <p className="admin-shipping-help">Use labels such as “Size M · Blue” or “500 g”. Leave price blank to use the base product price.</p>
+              {managedVariants.map(variant=><div className="admin-variant-row" key={variant.id}><span>{variant.label}</span><small>{variant.price===null?'Base price':money(Number(variant.price))} · Stock {variant.stock_quantity}</small><button type="button" disabled={variantBusy} onClick={()=>void removeVariant(variant)}>Remove</button></div>)}
+              <form className="admin-variant-form" onSubmit={saveVariant}>
+                <label>Option label<input value={variantLabel} onChange={e=>setVariantLabel(e.target.value)} maxLength={120} required placeholder="Size M · Blue"/></label>
+                <label>Price (₹, optional)<input type="number" min="0" step="0.01" value={variantPrice} onChange={e=>setVariantPrice(e.target.value)} placeholder="Use base price"/></label>
+                <label>Option stock<input type="number" min="0" step="1" value={variantStock} onChange={e=>setVariantStock(e.target.value)} required/></label>
+                <button className="admin-primary" disabled={variantBusy}>{variantBusy?'Saving…':'Add option'}</button>
+              </form>
+            </div>}
           </article>)}</div>}
       </section>
     
