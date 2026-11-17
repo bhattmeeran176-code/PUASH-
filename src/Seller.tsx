@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { ArrowLeft, CheckCircle2, Clock3, Store, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Clock3, Store, ShieldCheck, PackagePlus, Package, RefreshCw } from 'lucide-react';
 import { supabase } from './supabase';
 
 type SellerApplication = {
@@ -16,6 +16,7 @@ type SellerApplication = {
   status: 'pending' | 'approved' | 'rejected';
   admin_note: string | null;
 };
+type SellerProduct = { id:string; name:string; price:number; compare_at_price:number|null; stock_quantity:number; image_url:string|null; is_active:boolean; created_at:string };
 
 const emptyForm = {
   shop_name: '', contact_name: '', phone: '', category: 'General store',
@@ -30,6 +31,12 @@ export default function Seller() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [products, setProducts] = useState<SellerProduct[]>([]);
+  const [categories, setCategories] = useState<{id:string;name:string}[]>([]);
+  const [productBusy, setProductBusy] = useState(false);
+  const [productMessage, setProductMessage] = useState('');
+  const [productError, setProductError] = useState('');
+  const [productForm, setProductForm] = useState({name:'',description:'',price:'',compare_at_price:'',stock_quantity:'1',image_url:'',category_id:''});
 
   useEffect(() => {
     let alive = true;
@@ -60,6 +67,43 @@ export default function Seller() {
     });
     return () => { alive = false; listener.subscription.unsubscribe(); };
   }, []);
+
+  const loadSellerProducts = async () => {
+    if (!application) return;
+    const [{data:items,error:itemsError},{data:cats}] = await Promise.all([
+      supabase.from('products').select('id,name,price,compare_at_price,stock_quantity,image_url,is_active,created_at').eq('seller_application_id',application.id).order('created_at',{ascending:false}),
+      supabase.from('categories').select('id,name').eq('is_active',true).order('name')
+    ]);
+    if(itemsError){setProductError('Products load nahi hue: '+itemsError.message);return;}
+    setProducts((items||[]) as SellerProduct[]);
+    setCategories(cats||[]);
+  };
+
+  const addSellerProduct = async (event: FormEvent) => {
+    event.preventDefault();
+    if(!application || application.status!=='approved' || productBusy) return;
+    const price=Number(productForm.price), mrp=productForm.compare_at_price===''?null:Number(productForm.compare_at_price), stock=Number(productForm.stock_quantity);
+    if(!productForm.name.trim() || !Number.isFinite(price) || price<=0 || !Number.isInteger(stock) || stock<0 || (mrp!==null && (!Number.isFinite(mrp)||mrp<price))){setProductError('Name, valid price, stock aur MRP (selling price se kam nahi) check karein.');return;}
+    let imageUrl:string|null=null;
+    if(productForm.image_url.trim()){
+      try{const url=new URL(productForm.image_url.trim());if(!['https:','http:'].includes(url.protocol))throw new Error();imageUrl=url.toString();}
+      catch{setProductError('Image ke liye valid http/https URL dein.');return;}
+    }
+    setProductBusy(true);setProductError('');setProductMessage('');
+    const slug=productForm.name.trim().toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')+'-'+crypto.randomUUID().slice(0,8);
+    const {error:saveError}=await supabase.from('products').insert({
+      seller_application_id:application.id,category_id:productForm.category_id||null,
+      name:productForm.name.trim(),slug,description:productForm.description.trim()||null,
+      price,compare_at_price:mrp,image_url:imageUrl,stock_quantity:stock,is_active:false
+    });
+    setProductBusy(false);
+    if(saveError){setProductError('Product save nahi hua: '+saveError.message);return;}
+    setProductForm({name:'',description:'',price:'',compare_at_price:'',stock_quantity:'1',image_url:'',category_id:''});
+    setProductMessage('Product admin review ke liye submit ho gaya. Approval se pehle storefront par visible nahi hoga.');
+    await loadSellerProducts();
+  };
+
+  useEffect(()=>{if(application?.status==='approved')void loadSellerProducts();},[application?.id,application?.status]);
 
   const update = (key: keyof typeof emptyForm, value: string) => setForm(current => ({ ...current, [key]: value }));
 
@@ -107,13 +151,27 @@ export default function Seller() {
           <p>You need a PUASH customer account before submitting a shop application.</p>
           <a className="seller-submit" href="/account">Go to account</a>
         </section>
-      ) : application && application.status !== 'pending' ? (
-        <section className="seller-panel seller-status-panel">
-          <CheckCircle2 size={28}/>
-          <h2>Application {application.status}</h2>
-          <p>{application.status === 'approved' ? 'Your shop application has been approved. Seller tools will be enabled after the seller dashboard rollout.' : 'Your application was not approved at this time.'}</p>
-          {application.admin_note && <div className="seller-admin-note"><strong>Admin note</strong><span>{application.admin_note}</span></div>}
+      ) : application?.status === 'approved' ? (
+        <section className="seller-dashboard">
+          <div className="seller-panel seller-status-panel"><CheckCircle2 size={28}/><h2>{application.shop_name}</h2><p>Your seller account is approved. Products submitted here remain unpublished until PUASH admin review.</p></div>
+          <form className="seller-panel seller-form" onSubmit={addSellerProduct}>
+            <div className="seller-form-heading"><div><span className="seller-kicker">SELLER CATALOGUE</span><h2><PackagePlus size={20}/> Add a product</h2></div></div>
+            <label>Product name<input required minLength={2} maxLength={160} value={productForm.name} onChange={e=>setProductForm(v=>({...v,name:e.target.value}))} placeholder="Product name"/></label>
+            <label>Category<select value={productForm.category_id} onChange={e=>setProductForm(v=>({...v,category_id:e.target.value}))}><option value="">Choose category</option>{categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+            <label>Selling price (₹)<input required type="number" min="0.01" step="0.01" value={productForm.price} onChange={e=>setProductForm(v=>({...v,price:e.target.value}))}/></label>
+            <label>MRP (₹) <span className="seller-optional">optional</span><input type="number" min="0.01" step="0.01" value={productForm.compare_at_price} onChange={e=>setProductForm(v=>({...v,compare_at_price:e.target.value}))}/></label>
+            <label>Available stock<input required type="number" min="0" step="1" value={productForm.stock_quantity} onChange={e=>setProductForm(v=>({...v,stock_quantity:e.target.value}))}/></label>
+            <label>Product image URL<input type="url" value={productForm.image_url} onChange={e=>setProductForm(v=>({...v,image_url:e.target.value}))} placeholder="https://…"/></label>
+            <label className="seller-full-field">Description<textarea rows={4} maxLength={5000} value={productForm.description} onChange={e=>setProductForm(v=>({...v,description:e.target.value}))}/></label>
+            {productError&&<div className="seller-error" role="alert">{productError}</div>}{productMessage&&<div className="seller-success" role="status">{productMessage}</div>}
+            <button className="seller-submit" type="submit" disabled={productBusy}>{productBusy?'Submitting…':'Submit product for review'}</button>
+          </form>
+          <section className="seller-panel"><div className="seller-form-heading"><h2><Package size={20}/> My products</h2><button type="button" className="seller-refresh" onClick={loadSellerProducts}><RefreshCw size={15}/> Refresh</button></div>
+            {products.length===0?<p className="seller-footnote">Abhi koi product submit nahi hua.</p>:products.map(p=><article className="seller-product-row" key={p.id}>{p.image_url&&<img src={p.image_url} alt="" /> }<div><strong>{p.name}</strong><span>₹{Number(p.price).toLocaleString('en-IN')} · Stock {p.stock_quantity}</span><small>{p.is_active?'Published':'Pending admin review'}</small></div></article>)}
+          </section>
         </section>
+      ) : application && application.status !== 'pending' ? (
+        <section className="seller-panel seller-status-panel"><CheckCircle2 size={28}/><h2>Application {application.status}</h2><p>Your application was not approved at this time.</p>{application.admin_note&&<div className="seller-admin-note"><strong>Admin note</strong><span>{application.admin_note}</span></div>}</section>
       ) : (
         <form className="seller-panel seller-form" onSubmit={submit}>
           <div className="seller-form-heading">
