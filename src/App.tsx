@@ -38,6 +38,7 @@ type Product = {
   description: string;
   imageUrl?: string | null;
   stock: number;
+  createdAt?: string | null;
 };
 
 const sampleCategories = [
@@ -90,10 +91,18 @@ function App() {
   const [toast, setToast] = useState('');
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [wishlistBusy, setWishlistBusy] = useState<string | null>(null);
+  const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([]);
 
   useEffect(() => {
     localStorage.setItem('puash-cart', JSON.stringify(cart));
   }, [cart]);
+
+  useEffect(() => {
+    try {
+      const viewed = JSON.parse(localStorage.getItem('puash-recently-viewed') || '[]');
+      setRecentlyViewedIds(Array.isArray(viewed) ? viewed.map((item: any) => String(item.id)).slice(0, 8) : []);
+    } catch { setRecentlyViewedIds([]); }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -133,7 +142,7 @@ function App() {
       const [productResult, categoryResult, reviewResult] = await Promise.all([
         supabase
           .from('products')
-          .select('id,name,description,price,compare_at_price,image_url,stock_quantity,categories(name)')
+          .select('id,name,description,price,compare_at_price,image_url,stock_quantity,created_at,categories(name)')
           .eq('is_active', true)
           .order('created_at', { ascending: false }),
         supabase
@@ -176,6 +185,7 @@ function App() {
             description: row.description || 'Discover this product on PUASH.',
             imageUrl: row.image_url || null,
             stock: Number(row.stock_quantity || 0),
+            createdAt: row.created_at || null,
           };
         });
         setProducts(liveProducts);
@@ -346,6 +356,63 @@ function App() {
     setSearch('');
     document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  const inStockProducts = products.filter(product => product.stock > 0);
+  const newArrivals = [...inStockProducts]
+    .sort((a, b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || ''))
+    .slice(0, 4);
+  const topRatedProducts = [...inStockProducts]
+    .filter(product => product.reviews > 0)
+    .sort((a, b) => b.rating - a.rating || b.reviews - a.reviews)
+    .slice(0, 4);
+  const popularProducts = [...inStockProducts]
+    .filter(product => product.reviews > 0)
+    .sort((a, b) => b.reviews - a.reviews || b.rating - a.rating)
+    .slice(0, 4);
+  const recommendedProducts = [...inStockProducts]
+    .sort((a, b) => {
+      const discountA = a.mrp > 0 ? (a.mrp - a.price) / a.mrp : 0;
+      const discountB = b.mrp > 0 ? (b.mrp - b.price) / b.mrp : 0;
+      return discountB - discountA || b.rating - a.rating;
+    })
+    .slice(0, 4);
+  const recentlyViewedProducts = recentlyViewedIds
+    .map(id => products.find(product => product.id === id))
+    .filter((product): product is Product => Boolean(product && product.stock > 0));
+
+  const renderHomeShelf = (title: string, kicker: string, items: Product[], sectionId: string) => (
+    items.length > 0 ? (
+      <section className="home-shelf" aria-labelledby={sectionId}>
+        <div className="home-shelf-heading">
+          <div><span className="eyebrow">{kicker}</span><h2 id={sectionId}>{title}</h2></div>
+          <button type="button" onClick={startShopping}>View all <ArrowRight size={15}/></button>
+        </div>
+        <div className="home-shelf-grid">
+          {items.map(product => {
+            const discount = product.mrp > product.price && product.mrp > 0
+              ? Math.round((1 - product.price / product.mrp) * 100) : 0;
+            return (
+              <article className="home-shelf-card" key={sectionId + product.id}>
+                <button className="home-shelf-image" type="button" onClick={() => {
+                  rememberViewedProduct(product);
+                  window.location.href = '/product/' + product.id;
+                }} aria-label={'View ' + product.name}>
+                  {product.imageUrl ? <img src={product.imageUrl} alt={product.name}/> : <span>{product.emoji}</span>}
+                  {discount > 0 && <b>{discount}% OFF</b>}
+                </button>
+                <div className="home-shelf-info">
+                  <small>{product.category}</small>
+                  <button className="home-shelf-name" type="button" onClick={() => { rememberViewedProduct(product); window.location.href = '/product/' + product.id; }}>{product.name}</button>
+                  <div><strong>{money(product.price)}</strong>{product.mrp > product.price && <del>{money(product.mrp)}</del>}</div>
+                  <button className="home-shelf-add" type="button" onClick={() => addToCart(product)}><Plus size={14}/> Add to cart</button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+    ) : null
+  );
 
   return (
     <div className="app-shell">
@@ -526,6 +593,41 @@ function App() {
             </span>
           </div>
         </section>
+
+        <section className="home-category-section" aria-labelledby="home-category-title">
+          <div className="home-shelf-heading">
+            <div><span className="eyebrow">FIND YOUR EVERYDAY FAVOURITES</span><h2 id="home-category-title">Shop by category</h2></div>
+            <button type="button" onClick={startShopping}>Explore all <ArrowRight size={15}/></button>
+          </div>
+          <div className="home-category-grid">
+            {categories.filter(item => item.name !== 'All').map(item => {
+              const count = products.filter(product => product.category === item.name && product.stock > 0).length;
+              return (
+                <button type="button" className="home-category-card" key={item.name} onClick={() => {
+                  setCategory(item.name); setSearch('');
+                  document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' });
+                }}>
+                  <span className="home-category-emoji">{item.emoji}</span>
+                  <strong>{item.name}</strong>
+                  <small>{count > 0 ? count + (count === 1 ? ' product' : ' products') : 'Explore collection'}</small>
+                  <ArrowRight size={15}/>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="home-promo-strip" aria-label="PUASH shopping promise">
+          <div><span className="home-promo-icon">✦</span><span><strong>Discover something new</strong><small>Fresh finds for your everyday life</small></span></div>
+          <div><span className="home-promo-icon">♡</span><span><strong>Save what you love</strong><small>Keep favourites close with your wishlist</small></span></div>
+          <div><span className="home-promo-icon">⌁</span><span><strong>Easy checkout</strong><small>Clear totals before you place an order</small></span></div>
+        </section>
+
+        {renderHomeShelf('New arrivals', 'JUST ADDED TO PUASH', newArrivals, 'new-arrivals-title')}
+        {renderHomeShelf('Popular with shoppers', 'CUSTOMER FEEDBACK', popularProducts, 'popular-products-title')}
+        {renderHomeShelf('Picked for you', 'A LITTLE INSPIRATION', recommendedProducts, 'recommended-products-title')}
+        {renderHomeShelf('Top rated', 'CUSTOMER REVIEWS', topRatedProducts, 'top-rated-title')}
+        {renderHomeShelf('Recently viewed', 'PICK UP WHERE YOU LEFT OFF', recentlyViewedProducts, 'recently-viewed-title')}
 
         <section className="products-section" id="products">
           <div className="section-heading">
