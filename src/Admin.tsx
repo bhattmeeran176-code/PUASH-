@@ -24,7 +24,7 @@ type Product = {
   id: string; name: string; slug: string; description: string | null;
   price: number; compare_at_price: number | null; image_url: string | null;
   stock_quantity: number; is_active: boolean; category_id: string | null;
-  categories?: { name: string } | null;
+  categories?: { name: string }[] | null;
 };
 
 const money = (value: number) => '₹' + Number(value || 0).toLocaleString('en-IN');
@@ -88,7 +88,7 @@ export default function Admin() {
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [customerLoading, setCustomerLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'sales' | 'analytics' | 'products' | 'orders' | 'customers' | 'returns' | 'coupons' | 'inventory' | 'activity' | 'delivery' | 'sellers'>('sales');
+  const [activeTab, setActiveTab] = useState<'sales' | 'analytics' | 'products' | 'orders' | 'customers' | 'returns' | 'coupons' | 'inventory' | 'activity' | 'delivery' | 'sellers' | 'fulfilments' | 'settlements'>('sales');
   const [analyticsRange, setAnalyticsRange] = useState<'7'|'30'|'90'|'365'>('30');
   const [orderBusy, setOrderBusy] = useState<string | null>(null);
   const [shippingDrafts, setShippingDrafts] = useState<Record<string, { courier: string; tracking: string }>>({});
@@ -938,7 +938,7 @@ export default function Admin() {
         <div className="admin-panel-heading"><div><span className="admin-panel-icon"><RefreshCw size={17}/></span><strong>Return requests <small>({returnRequests.length})</small></strong></div><button className="admin-link" onClick={loadReturnRequests}><RefreshCw size={13}/> Refresh</button></div>
         <p className="admin-shipping-help">Review customer requests. Approving a return does not automatically issue a refund; payment/refund must be handled separately.</p>
         {busy ? <div className="admin-empty">Return requests load ho rahi hain…</div> : returnRequests.length===0 ? <div className="admin-empty">Abhi koi return request nahi hai.</div> : <div className="admin-customer-list">{returnRequests.map(item=><article className="admin-customer-card" key={item.id}>
-          <div className="admin-customer-summary"><span className="admin-customer-avatar"><Package size={18}/></span><span className="admin-customer-identity"><strong>Order #{item.order_id.slice(0,8).toUpperCase()}</strong><small>{item.reason.replaceAll('_',' ')} · {new Date(item.requested_at).toLocaleString('en-IN')}</small><small>{item.orders?.shipping_address?.full_name || 'Customer'} · {money(Number(item.orders?.total_amount || 0))}</small></span><span className={'admin-customer-order-status status-'+item.status}>{item.status.replaceAll('_',' ')}</span></div>
+          <div className="admin-customer-summary"><span className="admin-customer-avatar"><Package size={18}/></span><span className="admin-customer-identity"><strong>Order #{item.order_id.slice(0,8).toUpperCase()}</strong><small>{item.reason.replace(/_/g,' ')} · {new Date(item.requested_at).toLocaleString('en-IN')}</small><small>{item.orders?.shipping_address?.full_name || 'Customer'} · {money(Number(item.orders?.total_amount || 0))}</small></span><span className={'admin-customer-order-status status-'+item.status}>{item.status.replace(/_/g,' ')}</span></div>
           {item.details && <p className="admin-shipping-help">Customer note: {item.details}</p>}
           <textarea className="admin-return-note" value={returnNotes[item.id] ?? item.admin_note ?? ''} onChange={e=>setReturnNotes(prev=>({...prev,[item.id]:e.target.value}))} placeholder="Internal/customer response note (optional)" maxLength={1500}/>
           <div className="admin-return-actions">
