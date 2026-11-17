@@ -2196,8 +2196,8 @@ main {
 .home-promo-strip strong{color:#35352e;font-size:11px}
 .home-promo-strip small{color:#827c70;font-size:10px;line-height:1.4}
 .home-shelf{max-width:1180px;margin:36px auto 0;padding:0 34px}
-.home-shelf-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px}
-.home-shelf-card{position:relative;min-width:0;overflow:hidden;border:1px solid #eae6dd;border-radius:12px;background:#fff}
+.home-shelf-grid{display:flex;gap:15px;overflow-x:auto;overflow-y:hidden;padding:2px 1px 10px;scroll-snap-type:x mandatory;scrollbar-width:thin;scrollbar-color:#d9dfd1 transparent;-webkit-overflow-scrolling:touch}
+.home-shelf-card{position:relative;flex:0 0 220px;min-width:0;overflow:hidden;scroll-snap-align:start;border:1px solid #eae6dd;border-radius:12px;background:#fff}
 .home-shelf-image{position:relative;display:grid;width:100%;height:190px;place-items:center;overflow:hidden;border:0;background:#f5f3ec;cursor:pointer}
 .home-shelf-image img{width:100%;height:100%;object-fit:cover;transition:transform .25s ease}
 .home-shelf-card:hover .home-shelf-image img{transform:scale(1.035)}
@@ -2214,7 +2214,7 @@ main {
 @media(max-width:900px){
  .home-category-section,.home-shelf{padding-inline:24px}
  .home-category-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
- .home-shelf-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .home-shelf-card{flex-basis:205px}
  .home-shelf-image{height:170px}
 }
 @media(max-width:600px){
@@ -2228,7 +2228,8 @@ main {
  .home-category-card strong{font-size:12px}
  .home-promo-strip{margin:22px 15px 8px;padding:13px;grid-template-columns:1fr;gap:12px}
  .home-promo-icon{width:32px;height:32px;flex-basis:32px}
- .home-shelf-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .home-shelf-grid{gap:10px;margin-right:-15px;padding-right:15px}
+ .home-shelf-card{flex-basis:clamp(150px,43vw,190px)}
  .home-shelf-image{height:145px}
  .home-shelf-info{padding:10px;gap:6px}
  .home-shelf-name{font-size:11px}
