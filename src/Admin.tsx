@@ -1,11 +1,12 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { supabase } from './supabase';
-import { ArrowLeft, BarChart3, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X, AlertTriangle, TrendingUp, Users, UserRound, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { ArrowLeft, BarChart3, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, X, AlertTriangle, TrendingUp, Users, UserRound, ChevronDown, ChevronUp, Download, Activity } from 'lucide-react';
 
 type Category = { id: string; name: string };
 type OrderItem = { id: string; product_name: string; unit_price: number; quantity: number };
 type Order = { id: string; user_id: string; status: string; total_amount: number; subtotal_amount: number | null; delivery_fee: number; payment_method: string; shipping_address: any; customer_note: string | null; created_at: string; coupon_code: string | null; discount_amount: number; courier_name: string | null; tracking_number: string | null; shipped_at: string | null; delivered_at: string | null; order_items: OrderItem[] };
 type Customer = { customer_id: string; email: string | null; full_name: string | null; joined_at: string; order_count: number; delivered_spend: number };
+type ActivityLog = { id:string; actor_id:string|null; actor_name:string; action:string; entity_type:string; entity_id:string|null; entity_label:string; summary:string; old_data:Record<string,any>; new_data:Record<string,any>; created_at:string };
 type StockMovement = { id:string; product_id:string|null; product_name:string; previous_stock:number; new_stock:number; change_quantity:number; movement_type:string; actor_id:string|null; created_at:string };
 type Coupon = { id:string; code:string; discount_type:'percentage'|'fixed'; discount_value:number; min_order_amount:number; max_discount:number|null; starts_at:string|null; expires_at:string|null; usage_limit:number|null; per_user_limit:number; usage_count:number; is_active:boolean };
 type ReturnRequest = { id: string; order_id: string; user_id: string; reason: string; details: string | null; status: string; admin_note: string | null; requested_at: string; orders?: { total_amount: number; shipping_address: any } | null };
@@ -36,6 +37,10 @@ export default function Admin() {
   const [returnRequests, setReturnRequests] = useState<ReturnRequest[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [activityBusy, setActivityBusy] = useState(false);
+  const [activityFilter, setActivityFilter] = useState('all');
+  const [activitySearch, setActivitySearch] = useState('');
   const [stockDrafts, setStockDrafts] = useState<Record<string,string>>({});
   const [stockHistoryBusy, setStockHistoryBusy] = useState(false);
   const [couponCode, setCouponCode] = useState('');
@@ -50,7 +55,7 @@ export default function Admin() {
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [customerLoading, setCustomerLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'sales' | 'products' | 'orders' | 'customers' | 'returns' | 'coupons' | 'inventory'>('sales');
+  const [activeTab, setActiveTab] = useState<'sales' | 'products' | 'orders' | 'customers' | 'returns' | 'coupons' | 'inventory' | 'activity'>('sales');
   const [orderBusy, setOrderBusy] = useState<string | null>(null);
   const [shippingDrafts, setShippingDrafts] = useState<Record<string, { courier: string; tracking: string }>>({});
   const [productSearch, setProductSearch] = useState('');
@@ -148,6 +153,16 @@ export default function Admin() {
       .order('created_at', { ascending: false });
     if (error) setMessage('Orders load nahi hue: ' + error.message);
     else setOrders((data || []) as Order[]);
+  };
+
+  const loadActivityLogs = async () => {
+    setActivityBusy(true);
+    const { data, error } = await supabase.from('admin_activity_logs')
+      .select('id,actor_id,actor_name,action,entity_type,entity_id,entity_label,summary,old_data,new_data,created_at')
+      .order('created_at',{ascending:false}).limit(200);
+    if(error) setMessage('Activity logs load nahi hue: '+error.message);
+    else setActivityLogs((data||[]) as ActivityLog[]);
+    setActivityBusy(false);
   };
 
   const loadStockMovements = async () => {
@@ -406,8 +421,8 @@ export default function Admin() {
   return <div className="admin-screen">
     <header className="admin-header"><a href="/" className="admin-brand"><span>PUASH.</span><small>ADMIN</small></a><button className="admin-logout" onClick={()=>supabase.auth.signOut()}><LogOut size={16}/> Sign out</button></header>
     <main className="admin-main">
-      <div className="admin-title-row"><div><div className="admin-kicker">STORE CONTROL</div><h1>{activeTab === 'sales' ? 'Sales dashboard' : activeTab === 'products' ? 'Products' : activeTab === 'inventory' ? 'Inventory management' : activeTab === 'coupons' ? 'Coupons & discounts' : activeTab === 'returns' ? 'Returns' : activeTab === 'customers' ? 'Customers' : 'Orders'}</h1><p>{activeTab === 'sales' ? 'Your store performance at a glance.' : activeTab === 'products' ? 'Add, edit and publish products on your PUASH store.' : activeTab === 'inventory' ? 'Track stock levels and review every recorded stock movement.' : activeTab === 'coupons' ? 'Create and manage customer discount codes.' : activeTab === 'returns' ? 'Review and manage customer return requests.' : activeTab === 'customers' ? 'View customer accounts and order history.' : 'Review customer orders and update their fulfilment status.'}</p></div><button className="admin-refresh" onClick={() => { loadData(); loadOrders(); }}><RefreshCw size={16}/> Refresh</button></div>
-      <nav className="admin-tabs"><button className={activeTab === 'sales' ? 'active' : ''} onClick={() => setActiveTab('sales')}><BarChart3 size={16}/> Dashboard</button><button className={activeTab === 'products' ? 'active' : ''} onClick={() => setActiveTab('products')}><Package size={16}/> Products <span>{products.length}</span></button><button className={activeTab === 'orders' ? 'active' : ''} onClick={() => setActiveTab('orders')}><ClipboardList size={16}/> Orders <span>{genuineOrders.length}</span></button><button className={activeTab === 'customers' ? 'active' : ''} onClick={() => { setActiveTab('customers'); loadCustomers(); }}><Users size={16}/> Customers <span>{customers.length}</span></button><button className={activeTab === 'returns' ? 'active' : ''} onClick={() => { setActiveTab('returns'); loadReturnRequests(); }}><RefreshCw size={16}/> Returns <span>{returnRequests.filter(item=>item.status==='pending').length}</span></button><button className={activeTab === 'coupons' ? 'active' : ''} onClick={() => { setActiveTab('coupons'); loadCoupons(); }}><Save size={16}/> Coupons <span>{coupons.filter(c=>c.is_active).length}</span></button><button className={activeTab === 'inventory' ? 'active' : ''} onClick={() => { setActiveTab('inventory'); loadStockMovements(); }}><ClipboardList size={16}/> Inventory <span>{products.filter(p=>p.is_active && p.stock_quantity<=5).length}</span></button></nav>
+      <div className="admin-title-row"><div><div className="admin-kicker">STORE CONTROL</div><h1>{activeTab === 'sales' ? 'Sales dashboard' : activeTab === 'products' ? 'Products' : activeTab === 'inventory' ? 'Inventory management' : activeTab === 'activity' ? 'Admin activity logs' : activeTab === 'coupons' ? 'Coupons & discounts' : activeTab === 'returns' ? 'Returns' : activeTab === 'customers' ? 'Customers' : 'Orders'}</h1><p>{activeTab === 'sales' ? 'Your store performance at a glance.' : activeTab === 'products' ? 'Add, edit and publish products on your PUASH store.' : activeTab === 'inventory' ? 'Track stock levels and review every recorded stock movement.' : activeTab === 'activity' ? 'Review important changes made by store administrators.' : activeTab === 'coupons' ? 'Create and manage customer discount codes.' : activeTab === 'returns' ? 'Review and manage customer return requests.' : activeTab === 'customers' ? 'View customer accounts and order history.' : 'Review customer orders and update their fulfilment status.'}</p></div><button className="admin-refresh" onClick={() => { loadData(); loadOrders(); }}><RefreshCw size={16}/> Refresh</button></div>
+      <nav className="admin-tabs"><button className={activeTab === 'sales' ? 'active' : ''} onClick={() => setActiveTab('sales')}><BarChart3 size={16}/> Dashboard</button><button className={activeTab === 'products' ? 'active' : ''} onClick={() => setActiveTab('products')}><Package size={16}/> Products <span>{products.length}</span></button><button className={activeTab === 'orders' ? 'active' : ''} onClick={() => setActiveTab('orders')}><ClipboardList size={16}/> Orders <span>{genuineOrders.length}</span></button><button className={activeTab === 'customers' ? 'active' : ''} onClick={() => { setActiveTab('customers'); loadCustomers(); }}><Users size={16}/> Customers <span>{customers.length}</span></button><button className={activeTab === 'returns' ? 'active' : ''} onClick={() => { setActiveTab('returns'); loadReturnRequests(); }}><RefreshCw size={16}/> Returns <span>{returnRequests.filter(item=>item.status==='pending').length}</span></button><button className={activeTab === 'coupons' ? 'active' : ''} onClick={() => { setActiveTab('coupons'); loadCoupons(); }}><Save size={16}/> Coupons <span>{coupons.filter(c=>c.is_active).length}</span></button><button className={activeTab === 'inventory' ? 'active' : ''} onClick={() => { setActiveTab('inventory'); loadStockMovements(); }}><ClipboardList size={16}/> Inventory <span>{products.filter(p=>p.is_active && p.stock_quantity<=5).length}</span></button><button className={activeTab === 'activity' ? 'active' : ''} onClick={() => { setActiveTab('activity'); loadActivityLogs(); }}><Activity size={16}/> Activity <span>{activityLogs.length}</span></button></nav>
       {message && <div className="admin-message">{message}<button onClick={()=>setMessage('')}><X size={14}/></button></div>}
       {activeTab === 'sales' ? <section className="admin-sales-dashboard">
         <div className="admin-sales-note">Figures exclude internal test orders. Sales total below counts delivered orders only.</div>
@@ -502,7 +517,27 @@ export default function Admin() {
             <small>{m.previous_stock} → {m.new_stock}</small>
           </article>)}</div>}
         </section>
-      </> : activeTab === 'coupons' ? <section className="admin-panel">
+      </> : activeTab === 'activity' ? <section className="admin-panel">
+        <div className="admin-panel-heading"><div><span className="admin-panel-icon"><Activity size={17}/></span><strong>Admin activity <small>({activityLogs.length})</small></strong></div><button className="admin-link" onClick={loadActivityLogs}><RefreshCw size={13}/> Refresh logs</button></div>
+        <p className="admin-shipping-help">Important product, stock, order, return aur coupon changes ka record. Customer addresses, payment details ya passwords yahan store nahi hote.</p>
+        <div className="admin-activity-filters">
+          <input value={activitySearch} onChange={e=>setActivitySearch(e.target.value)} placeholder="Search action or item…" aria-label="Search activity logs"/>
+          <select value={activityFilter} onChange={e=>setActivityFilter(e.target.value)} aria-label="Filter activity type">
+            <option value="all">All activity</option><option value="product">Products</option><option value="order">Orders</option><option value="return">Returns</option><option value="coupon">Coupons</option>
+          </select>
+        </div>
+        {activityBusy ? <div className="admin-empty">Activity logs load ho rahe hain…</div> :
+          activityLogs.filter(log => (activityFilter==='all'||log.entity_type===activityFilter) && [log.actor_name,log.action,log.entity_label,log.summary].join(' ').toLowerCase().includes(activitySearch.trim().toLowerCase())).length===0 ?
+          <div className="admin-empty">Abhi koi matching admin activity record nahi hai. Naye admin changes yahan automatically log honge.</div> :
+          <div className="admin-activity-list">{activityLogs.filter(log => (activityFilter==='all'||log.entity_type===activityFilter) && [log.actor_name,log.action,log.entity_label,log.summary].join(' ').toLowerCase().includes(activitySearch.trim().toLowerCase())).map(log=><article className="admin-activity-row" key={log.id}>
+            <div className="admin-activity-icon"><Activity size={15}/></div>
+            <div className="admin-activity-content"><div className="admin-activity-top"><strong>{log.entity_label}</strong><span className={'admin-activity-type activity-'+log.entity_type}>{log.entity_type}</span></div>
+              <p>{log.summary}</p><small>{log.actor_name} · {new Date(log.created_at).toLocaleString('en-IN')}</small>
+            </div>
+            <code>{log.action}</code>
+          </article>)}</div>}
+        <p className="admin-shipping-help">Showing the latest 200 records. Full history remains stored in the database.</p>
+      </section> : activeTab === 'coupons' ? <section className="admin-panel">
         <div className="admin-panel-heading"><div><span className="admin-panel-icon"><Save size={17}/></span><strong>Coupons & discounts</strong></div><button className="admin-link" onClick={loadCoupons}><RefreshCw size={13}/> Refresh</button></div>
         <form className="admin-coupon-form" onSubmit={createCoupon}>
           <strong>Create a coupon</strong>
