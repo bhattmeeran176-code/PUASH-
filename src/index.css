@@ -2468,3 +2468,63 @@ main { max-width:1280px; }
   .hero-copy p { max-width:195px; }
   .benefit-row small { display:none; }
 }
+
+
+/* PUASH brand identity, cover art and subtle motion system */
+.wordmark-symbol { width:42px; height:42px; color:#fffaf0; background:#173c31; border-radius:13px; }
+.wordmark-symbol svg { width:100%; height:100%; padding:5px; }
+.wordmark-type { display:flex; flex-direction:column; align-items:flex-start; line-height:1; gap:4px; }
+.wordmark-type small { font-size:6px; letter-spacing:.22em; color:#78877b; font-weight:700; }
+.hero { isolation:isolate; background:linear-gradient(115deg,#f3f5ed 0%,#f2e7d9 100%); }
+.hero::before { content:""; position:absolute; inset:0; z-index:-1; opacity:.28; background-image:radial-gradient(#718a72 0.7px,transparent .7px); background-size:19px 19px; mask-image:linear-gradient(90deg,black,transparent 75%); }
+.hero-copy { animation:puash-rise .8s cubic-bezier(.2,.7,.2,1) both; }
+.hero-art { perspective:900px; }
+.hero-glow { position:absolute; width:320px; height:320px; border-radius:50%; background:radial-gradient(circle,rgba(217,181,142,.38),rgba(217,181,142,0) 68%); animation:puash-glow 5s ease-in-out infinite; }
+.hero-orbit { animation:puash-orbit 28s linear infinite; }
+.orbit-two { animation-direction:reverse; animation-duration:21s; }
+.hero-sun { animation:puash-sun 7s ease-in-out infinite; }
+.hero-mountain { position:absolute; bottom:32px; width:260px; height:150px; clip-path:polygon(0 100%,48% 0,100% 100%); opacity:.25; }
+.mountain-back { background:#a6b6a1; transform:translate(78px,0) scale(1.35); }
+.mountain-front { background:#68866f; transform:translate(-75px,20px) scale(.95); opacity:.18; }
+.hero-bag { width:180px; height:190px; border-radius:12px 12px 22px 22px; background:linear-gradient(145deg,#315b48,#173c31); transform-origin:50% 90%; animation:puash-float 5s ease-in-out infinite; box-shadow:20px 27px 55px rgba(23,60,49,.22); }
+.hero-bag svg { width:92px; height:92px; margin-top:8px; }
+.hero-bag > span:last-of-type { font-size:12px; letter-spacing:.25em; }
+.hero-bag small { color:#d9b58e; font-size:6px; letter-spacing:.19em; font-weight:700; }
+.bag-handle { display:none; }
+.floating-card { animation:puash-card 5.5s ease-in-out infinite; }
+.card-two { animation-delay:-2.5s; }
+.hero-flower { animation:puash-spin 22s linear infinite; }
+.hero-spark { position:absolute; color:#bd6848; font-size:24px; animation:puash-twinkle 2.8s ease-in-out infinite; }
+.spark-one { top:18%; left:23%; }
+.spark-two { right:15%; bottom:22%; animation-delay:-1s; }
+.spark-three { top:29%; right:22%; font-size:15px; animation-delay:-1.8s; }
+.wordmark-symbol { transition:transform .25s ease, box-shadow .25s ease; }
+.wordmark:hover .wordmark-symbol { transform:rotate(-7deg) scale(1.06); box-shadow:0 8px 20px rgba(23,60,49,.2); }
+.product-card { animation:puash-card-in .55s both; }
+.product-card:nth-child(2n) { animation-delay:.06s; }
+.product-card:nth-child(3n) { animation-delay:.12s; }
+.product-card:nth-child(4n) { animation-delay:.18s; }
+.primary-button { position:relative; overflow:hidden; }
+.primary-button::after { content:""; position:absolute; inset:-40% auto -40% -45%; width:28%; transform:skewX(-20deg); background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent); transition:left .55s ease; }
+.primary-button:hover::after { left:130%; }
+@keyframes puash-rise { from {opacity:0;transform:translateY(18px)} to {opacity:1;transform:translateY(0)} }
+@keyframes puash-float { 0%,100% {transform:translateY(0) rotate(-5deg)} 50% {transform:translateY(-13px) rotate(-2deg)} }
+@keyframes puash-card { 0%,100% {transform:translateY(0) rotate(5deg)} 50% {transform:translateY(-9px) rotate(3deg)} }
+@keyframes puash-orbit { to {transform:rotate(360deg)} }
+@keyframes puash-sun { 0%,100% {transform:translate(26px,-22px) scale(1)} 50% {transform:translate(16px,-30px) scale(1.06)} }
+@keyframes puash-glow { 0%,100% {transform:scale(.92);opacity:.65} 50% {transform:scale(1.08);opacity:1} }
+@keyframes puash-spin { to {transform:rotate(360deg)} }
+@keyframes puash-twinkle { 0%,100% {opacity:.35;transform:scale(.8) rotate(0)} 50% {opacity:1;transform:scale(1.2) rotate(25deg)} }
+@keyframes puash-card-in { from {opacity:0;transform:translateY(10px)} to {opacity:1;transform:translateY(0)} }
+@media (prefers-reduced-motion: reduce) {
+  *,*::before,*::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; scroll-behavior:auto !important; transition-duration:.01ms !important; }
+}
+@media (max-width:760px) {
+ .wordmark-symbol { width:35px; height:35px; }
+ .wordmark-type small { font-size:5px; }
+ .hero-mountain { transform:translate(20px,25px) scale(.75); }
+ .hero-bag { width:132px; height:145px; }
+ .hero-bag svg { width:70px; height:70px; }
+ .hero-bag small { font-size:5px; }
+ .hero-glow { width:230px; height:230px; }
+}
