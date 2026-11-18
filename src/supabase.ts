@@ -4,4 +4,13 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wkemfpwmnxqrmqilmosr.supabase.co';
 const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_fXii6oGwa4SVDlS3qorE6A_UB5vWpBt';
 
-export const supabase = createClient(supabaseUrl, supabasePublishableKey);
+// Keep the auth session in persistent local storage so closing and reopening PUASH
+// does not sign the customer out. The same storage is shared by every app page.
+export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
+  auth: {
+    storage: window.localStorage,
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+});
