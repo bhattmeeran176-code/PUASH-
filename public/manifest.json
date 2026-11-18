@@ -7,5 +7,5 @@
   "display": "standalone",
   "background_color": "#f3f5ed",
   "theme_color": "#173c31",
-  "icons": [{"src":"./puash-logo.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+  "icons": [{"src":"./puash-kashmir-app-icon.svg","sizes":"512x512","type":"image/svg+xml","purpose":"any maskable"}]
 }
