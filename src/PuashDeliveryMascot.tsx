@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function PuashDeliveryMascot() {
   return (
     <svg className="puash-mascot" viewBox="0 0 360 390" role="img" aria-label="PUASH delivery character carrying a parcel">
