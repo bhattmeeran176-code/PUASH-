@@ -53,6 +53,9 @@ export default function Account() {
   const [fullName, setFullName] = useState('');
   const [savedName, setSavedName] = useState('');
   const [busy, setBusy] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
   const [addressBusy, setAddressBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -294,15 +297,28 @@ export default function Account() {
     }
   };
 
-  const signInWithGoogle = async () => {
+  const authenticateWithEmail = async (event: FormEvent) => {
+    event.preventDefault();
+    const email = authEmail.trim().toLowerCase();
+    if (!email || authPassword.length < 8) {
+      setError('Valid email aur kam se kam 8 characters ka password enter karein.');
+      return;
+    }
     setBusy(true); setError(''); setMessage('');
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin + '/account' },
-    });
-    if (oauthError) {
+    if (authMode === 'signup') {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password: authPassword,
+        options: { emailRedirectTo: window.location.origin + '/account' },
+      });
       setBusy(false);
-      setError('Google sign-in start nahi hua: ' + oauthError.message);
+      if (signUpError) setError('Account create nahi hua: ' + signUpError.message);
+      else if (data.session) setMessage('PUASH account create ho gaya. Aap sign in hain.');
+      else setMessage('Account request receive ho gayi. Agar email confirmation enabled hai to inbox check karein.');
+    } else {
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: authPassword });
+      setBusy(false);
+      if (signInError) setError('Login nahi hua: ' + signInError.message);
     }
   };
 
@@ -383,12 +399,15 @@ export default function Account() {
       <div className="account-brand">PUASH<span>.</span><small>YOUR ACCOUNT</small></div>
       <div className="account-icon">{user ? <UserRound size={26}/> : <ShieldCheck size={26}/>}</div>
       {!user ? <>
-        <h1>Welcome to PUASH.</h1>
-        <p>Google se sign in karke apna PUASH shopping account access karein.</p>
-        <button type="button" className="account-primary" disabled={busy} onClick={() => void signInWithGoogle()}>
-          {busy ? 'Connecting…' : 'Continue with Google'}
-        </button>
-        <p className="account-auth-note">Google ke secure sign-in se login karein. First login par PUASH account automatically create ho jayega.</p>
+        <h1>{authMode === 'login' ? 'Welcome back.' : 'Create your account.'}</h1>
+        <p>Email aur password se apna PUASH shopping account access karein.</p>
+        <form className="account-form" onSubmit={authenticateWithEmail}>
+          <label>Email address<input type="email" required autoComplete="email" value={authEmail} onChange={e=>setAuthEmail(e.target.value)} placeholder="you@example.com"/></label>
+          <label>Password<input type="password" required minLength={8} autoComplete={authMode === 'login' ? 'current-password' : 'new-password'} value={authPassword} onChange={e=>setAuthPassword(e.target.value)} placeholder="At least 8 characters"/></label>
+          <button className="account-primary" disabled={busy}>{busy ? 'Please wait…' : authMode === 'login' ? 'Sign in' : 'Create account'}</button>
+        </form>
+        <p className="account-auth-note">{authMode === 'login' ? "New to PUASH?" : 'Already have a PUASH account?'} <button type="button" className="address-add" onClick={()=>{setAuthMode(authMode === 'login' ? 'signup' : 'login');setError('');setMessage('');}}>{authMode === 'login' ? 'Create an account' : 'Sign in'}</button></p>
+        <p className="account-auth-note">Use a strong password. Email confirmation may be required depending on PUASH authentication settings.</p>
       </> : <>
                 <h1>My account.</h1>
         <p>Apni profile aur delivery addresses yahan manage karein.</p>
