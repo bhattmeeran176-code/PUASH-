@@ -1,0 +1,38 @@
+.launch-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 38%, #f7f4e9 0%, #e9eee5 48%, #dce7dc 100%);
+  color: #244735;
+  opacity: 1;
+  transition: opacity .48s ease, visibility .48s ease;
+}
+.launch-screen--leaving { opacity: 0; visibility: hidden; pointer-events: none; }
+.launch-content { width: min(86vw, 360px); display: flex; flex-direction: column; align-items: center; text-align: center; }
+.launch-brand-mark {
+  width: 66px; height: 66px; display: grid; place-items: center;
+  color: #fffefa; background: #315b48; border-radius: 21px;
+  box-shadow: 0 12px 30px rgba(36,71,53,.18);
+  animation: launch-pop .7s cubic-bezier(.2,.8,.2,1) both;
+}
+.launch-wordmark { margin-top: 18px; font-size: 29px; font-weight: 800; letter-spacing: .19em; }
+.launch-wordmark span { color: #bd8258; }
+.launch-tagline { margin: 5px 0 0; color: #77796e; font-size: 11px; letter-spacing: .12em; }
+.launch-road { position: relative; width: 100%; height: 62px; margin-top: 43px; border-bottom: 2px solid rgba(49,91,72,.22); }
+.launch-road-line { position: absolute; left: 0; right: 0; bottom: 9px; border-bottom: 1px dashed rgba(49,91,72,.28); }
+.launch-truck { position: absolute; left: 4%; bottom: 8px; color: #315b48; animation: launch-drive 1.65s cubic-bezier(.45,0,.55,1) .25s both; }
+.launch-package { position: absolute; right: 10%; bottom: 20px; color: #bd8258; font-size: 17px; animation: launch-sparkle 1s ease-in-out infinite alternate; }
+.launch-message { margin: 22px 0 17px; color: #475d4c; font-size: 12px; font-weight: 600; letter-spacing: .025em; }
+.launch-progress { width: 116px; height: 3px; border-radius: 5px; background: rgba(49,91,72,.13); overflow: hidden; }
+.launch-progress span { display: block; height: 100%; width: 40%; border-radius: inherit; background: #315b48; animation: launch-load 1.8s ease-in-out both; }
+@keyframes launch-pop { from { opacity: 0; transform: translateY(12px) scale(.88); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes launch-drive { 0% { left: 4%; transform: translateY(0); } 45% { transform: translateY(-4px); } 100% { left: 75%; transform: translateY(0); } }
+@keyframes launch-sparkle { from { opacity: .45; transform: scale(.8) rotate(-15deg); } to { opacity: 1; transform: scale(1.15) rotate(15deg); } }
+@keyframes launch-load { from { width: 0; } to { width: 100%; } }
+@media (prefers-reduced-motion: reduce) {
+  .launch-brand-mark, .launch-truck, .launch-package, .launch-progress span { animation: none; }
+  .launch-screen { transition-duration: .01ms; }
+}
