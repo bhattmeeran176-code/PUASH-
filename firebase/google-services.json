@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "204699417584",
+    "project_id": "puash-c27f3",
+    "storage_bucket": "puash-c27f3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:204699417584:android:f7e4d8593fd9e14ff63b35",
+        "android_client_info": {
+          "package_name": "com.puash.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDS-uDDu-wIeVYElUrr8ulUQL0dZrEjVao"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

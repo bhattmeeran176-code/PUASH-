@@ -16,7 +16,8 @@
     "react-dom": "^19.0.0",
     "@supabase/supabase-js": "2.117.1",
     "@capacitor/core": "^7.4.3",
-    "@capacitor/android": "^7.4.3"
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/push-notifications": "7.0.7"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

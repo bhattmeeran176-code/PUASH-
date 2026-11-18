@@ -38,6 +38,12 @@ jobs:
       - name: Add Android platform
         run: npx cap add android
 
+      - name: Add Firebase Android configuration
+        run: |
+          mkdir -p android/app
+          cp firebase/google-services.json android/app/google-services.json
+          test -s android/app/google-services.json
+
       - name: Sync Capacitor
         run: npx cap sync android
 

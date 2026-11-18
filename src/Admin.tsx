@@ -453,7 +453,20 @@ export default function Admin() {
     const { error } = await supabase.from('orders').update(orderUpdate).eq('id', orderId);
     setOrderBusy(null);
     if (error) setMessage('Order status update nahi hua: ' + error.message);
-    else { setMessage('Order status update ho gaya.'); await loadOrders(); }
+    else {
+      const { data: pushResult, error: pushError } = await supabase.functions.invoke('send-order-push', {
+        body: { order_id: orderId, status },
+      });
+      if (pushError || pushResult?.error) {
+        console.error('PUASH order push could not be sent:', pushError?.message || pushResult?.error);
+        setMessage('Order status update ho gaya, lekin push notification send nahi hui.');
+      } else {
+        setMessage(pushResult?.sent > 0
+          ? 'Order update ho gaya aur customer ko push notification bhej di gayi.'
+          : 'Order status update ho gaya. Customer ka koi Android device registered nahi hai.');
+      }
+      await loadOrders();
+    }
   };
 
   useEffect(() => { if (isAdmin) { loadData(); loadOrders(); loadDeliveryZones(); } }, [isAdmin]);
