@@ -1,55 +1,28 @@
 .launch-screen {
-  position: fixed;
-  inset: 0;
-  z-index: 99999;
-  width: 100%;
-  height: 100%;
-  height: 100dvh;
-  overflow: hidden;
-  background: #173c31;
-  opacity: 1;
-  transition: opacity .45s ease, visibility .45s ease;
+  position: fixed; inset: 0; z-index: 99999; display: grid; place-items: center;
+  overflow: hidden; box-sizing: border-box;
+  padding: max(16px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+  background: radial-gradient(ellipse at 50% 38%, #fffdf5 0%, #f1f2e8 54%, #dfe9df 100%);
+  color: #173c31; opacity: 1; transition: opacity .5s ease, visibility .5s ease;
 }
-.launch-screen--leaving {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-.launch-background {
-  position: absolute;
-  inset: 0;
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-}
-.launch-progress {
-  position: absolute;
-  left: 50%;
-  bottom: max(28px, env(safe-area-inset-bottom));
-  transform: translateX(-50%);
-  width: min(68vw, 310px);
-  height: 7px;
-  border: 1px solid rgba(255,255,255,.78);
-  border-radius: 999px;
-  overflow: hidden;
-  background: rgba(17,45,34,.72);
-  box-shadow: 0 2px 18px rgba(0,0,0,.24);
-}
-.launch-progress span {
-  display: block;
-  width: 0;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #f6a21a, #ff6b00);
-  box-shadow: 0 0 12px rgba(255,133,0,.72);
-  animation: launch-load 4.2s linear both;
-}
-@keyframes launch-load {
-  to { width: 100%; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .launch-progress span { animation-duration: 1.5s; }
-  .launch-screen { transition-duration: .01ms; }
-}
+.launch-screen--leaving { opacity: 0; visibility: hidden; pointer-events: none; }
+.launch-content { width: min(90vw, 390px); height: min(78vh, 690px); min-height: min(500px, 78vh); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; position:relative; }
+.launch-wordmark { font-size: clamp(36px, 10vw, 49px); line-height:1; font-weight:900; letter-spacing:.17em; color:#173c31; text-shadow:0 2px 0 rgba(255,255,255,.9); }
+.launch-wordmark span { color:#bd8258; }
+.launch-tagline { margin:10px 0 0; font-size:10px; letter-spacing:.23em; font-weight:700; color:#788477; }
+.launch-mascot-stage { width:100%; height:min(52vh, 410px); min-height:270px; position:relative; display:grid; place-items:center; margin-top:10px; }
+.puash-mascot { position:relative; z-index:2; height:100%; width:100%; max-width:355px; overflow:visible; filter:drop-shadow(0 18px 18px rgba(30,65,47,.14)); animation:mascot-arrive 1.1s cubic-bezier(.2,.8,.2,1) both, mascot-float 2.4s ease-in-out 1.1s infinite; transform-origin:50% 90%; }
+.launch-delivery-glow { position:absolute; z-index:0; bottom:5%; width:66%; height:13%; border-radius:50%; background:rgba(49,91,72,.13); filter:blur(18px); }
+.launch-speed { position:absolute; left:3%; height:3px; border-radius:5px; background:#bd8258; opacity:0; animation:speed-streak 1.3s ease-out .35s both; }
+.speed-one { top:38%; width:52px; }.speed-two { top:44%; width:34px; animation-delay:.55s; }
+.launch-delivery-copy { margin-top:4px; }
+.launch-eyebrow { font-size:9px; letter-spacing:.19em; font-weight:800; color:#a06d4d; }
+.launch-message { margin:10px 0 18px; font-size:16px; line-height:1.35; font-weight:750; color:#294b38; }
+.launch-progress { width:126px; height:4px; border-radius:8px; background:rgba(49,91,72,.13); overflow:hidden; }
+.launch-progress span { display:block; height:100%; width:0; border-radius:inherit; background:linear-gradient(90deg,#315b48,#bd8258); animation:launch-load 2.6s ease-in-out both; }
+@keyframes mascot-arrive { from { opacity:0; transform:translate3d(-30px,25px,0) scale(.88) rotate(-4deg); } to { opacity:1; transform:translate3d(0,0,0) scale(1) rotate(0); } }
+@keyframes mascot-float { 0%,100% { transform:translateY(0) rotate(0); } 50% { transform:translateY(-7px) rotate(.6deg); } }
+@keyframes speed-streak { 0% { opacity:0; transform:translateX(-20px) scaleX(.5); } 35% { opacity:.8; } 100% { opacity:0; transform:translateX(28px) scaleX(1.1); } }
+@keyframes launch-load { 0% { width:0; } 100% { width:100%; } }
+@media (max-height:650px) { .launch-content { height:90vh; min-height:0; } .launch-mascot-stage { height:43vh; min-height:210px; } .launch-message { margin:6px 0 10px; } }
+@media (prefers-reduced-motion:reduce) { .puash-mascot,.launch-speed,.launch-progress span { animation:none; } .launch-screen { transition-duration:.01ms; } }
