@@ -11,7 +11,7 @@ export default function KashmirDeliveryScene() {
           <linearGradient id="road" x1="0" y1="0" x2="0" y2="1"><stop stopColor="#8b918b"/><stop offset="1" stopColor="#59645f"/></linearGradient>
         </defs>
         <rect width="420" height="470" fill="url(#sky)"/>
-        <g className="scene-clouds" fill="#fff" opacity=".78"><ellipse cx="83" cy="82" rx="65" ry="17"/><ellipse cx="117" cy="74" rx="36" ry="20/><ellipse cx="330" cy="111" rx="58" ry="14"/></g>
+        <g className="scene-clouds" fill="#fff" opacity=".78"><ellipse cx="83" cy="82" rx="65" ry="17"/><ellipse cx="117" cy="74" rx="36" ry="20"/><ellipse cx="330" cy="111" rx="58" ry="14"/></g>
         <path d="M0 237L75 127l31 44 57-92 68 107 52-68 62 85 45-48 30 39v94H0Z" fill="#a8c9d1"/>
         <path d="M106 171l57-92 25 39-16-8-10 15-12-5-14 20-13-3Z M231 186l52-68 29 40-18-8-12 12-12-6-14 15Z M0 237l75-110 20 28-16-5-11 13-12-4-19 29Z" fill="#fffdf5"/>
         <path d="M0 239q70-43 132-6t138-5q79-42 150 9v76H0Z" fill="url(#hills)"/>
