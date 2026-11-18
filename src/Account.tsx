@@ -383,8 +383,8 @@ export default function Account() {
       <div className="account-brand">PUASH<span>.</span><small>YOUR ACCOUNT</small></div>
       <div className="account-icon">{user ? <UserRound size={26}/> : <ShieldCheck size={26}/>}</div>
       {!user ? <>
-        <h1>{mode === 'login' ? 'Welcome back.' : 'Create your account.'}</h1>
-        <p>{mode === 'login' ? 'Sign in karke apna PUASH shopping account access karein.' : 'PUASH par apna customer account banayein.'}</p>
+        <h1>Welcome to PUASH.</h1>
+        <p>Google se sign in karke apna PUASH shopping account access karein.</p>
         <button type="button" className="account-primary" disabled={busy} onClick={() => void signInWithGoogle()}>
           {busy ? 'Connecting…' : 'Continue with Google'}
         </button>
