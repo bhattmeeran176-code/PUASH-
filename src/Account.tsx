@@ -347,6 +347,18 @@ export default function Account() {
     }
   };
 
+  const signInWithGoogle = async () => {
+    setBusy(true); setError(''); setMessage('');
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + '/account' },
+    });
+    if (oauthError) {
+      setBusy(false);
+      setError('Google sign-in start nahi hua: ' + oauthError.message);
+    }
+  };
+
   const authenticate = async (event: FormEvent) => {
     event.preventDefault(); setBusy(true); setError(''); setMessage('');
     const result = mode === 'login'
@@ -440,18 +452,11 @@ export default function Account() {
       {!user ? <>
         <h1>{mode === 'login' ? 'Welcome back.' : 'Create your account.'}</h1>
         <p>{mode === 'login' ? 'Sign in karke apna PUASH shopping account access karein.' : 'PUASH par apna customer account banayein.'}</p>
-        {authMethod === 'email' ? <>
-          <form className="account-form" onSubmit={authenticate}>
-            {mode === 'signup' && <label>Full name<input value={fullName} onChange={e=>setFullName(e.target.value)} autoComplete="name" required placeholder="Your name"/></label>}
-            <label>Email address<input type="email" value={email} onChange={e=>setEmail(e.target.value)} autoComplete="email" required placeholder="you@example.com"/></label>
-            <label>Password<input type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={8} required placeholder="At least 8 characters"/></label>
-            <button className="account-primary" disabled={busy}>{busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}</button>
-          </form>
-          <button type="button" className="account-switch" onClick={()=>{setAuthMethod('phone');setPhoneOtpSent(false);setError('');setMessage('')}}>Continue with mobile number (OTP)</button>
-          <button type="button" className="account-switch" onClick={()=>{setMode(mode === 'login' ? 'signup' : 'login');setMessage('');setError('')}}>
-            {mode === 'login' ? 'New to PUASH? Create an account' : 'Already have an account? Sign in'}
-          </button>
-        </> : <>
+        <button type="button" className="account-primary" disabled={busy} onClick={() => void signInWithGoogle()}>
+          {busy ? 'Connecting…' : 'Continue with Google'}
+        </button>
+        <p className="account-auth-note">Google ke secure sign-in se login karein. First login par PUASH account automatically create ho jayega.</p>
+      </> : <>
           {!phoneOtpSent ? <form className="account-form" onSubmit={event=>{event.preventDefault();void requestPhoneOtp()}}>
             <label>Mobile number<input type="tel" inputMode="tel" autoComplete="tel" value={phoneNumber} onChange={e=>setPhoneNumber(e.target.value)} required placeholder="+91 98765 43210"/></label>
             <p className="account-auth-note">We'll send a one-time 6-digit code by SMS. Enter your country code for numbers outside India.</p>
