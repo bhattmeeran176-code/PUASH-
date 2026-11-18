@@ -15,6 +15,6 @@ The `register-push-token` Edge Function verifies the signed-in Supabase user bef
 
 ## Important
 
-This foundation registers the device and stores its token. It does not yet send order or delivery push messages while PUASH is closed. Server-side FCM sending and wiring notification events to the sender require the Firebase service-account credentials to be stored as Supabase Edge Function secrets, never in the app or Git repository.
+The `send-order-push` Edge Function sends an FCM HTTP v1 notification to a customer's registered Android devices after an admin changes an order status. It verifies the caller's Supabase JWT and checks the caller's `profiles.role` is `admin`, then confirms the submitted status matches the saved order before sending. The Firebase service-account JSON must be stored as the Supabase Edge Function secret `FIREBASE_SERVICE_ACCOUNT`. The private key must never be added to the app or Git repository. The admin UI invokes this function after a successful order status update.
 
 Never commit Firebase service-account private keys or Supabase service-role keys.
