@@ -456,20 +456,7 @@ export default function Account() {
         </button>
         <p className="account-auth-note">Google ke secure sign-in se login karein. First login par PUASH account automatically create ho jayega.</p>
       </> : <>
-          {!phoneOtpSent ? <form className="account-form" onSubmit={event=>{event.preventDefault();void requestPhoneOtp()}}>
-            <label>Mobile number<input type="tel" inputMode="tel" autoComplete="tel" value={phoneNumber} onChange={e=>setPhoneNumber(e.target.value)} required placeholder="+91 98765 43210"/></label>
-            <p className="account-auth-note">We'll send a one-time 6-digit code by SMS. Enter your country code for numbers outside India.</p>
-            <button className="account-primary" disabled={busy}>{busy ? 'Sending OTP…' : 'Send OTP'}</button>
-          </form> : <form className="account-form" onSubmit={verifyPhoneOtp}>
-            <label>6-digit OTP<input type="text" inputMode="numeric" autoComplete="one-time-code" value={phoneOtp} onChange={e=>setPhoneOtp(e.target.value.replace(/\D/g,'').slice(0,6))} required maxLength={6} pattern="[0-9]{6}" placeholder="Enter OTP"/></label>
-            <p className="account-auth-note">Code sent to {phoneNumber}. OTP delivery depends on PUASH's configured SMS provider.</p>
-            <button className="account-primary" disabled={busy}>{busy ? 'Verifying…' : 'Verify and sign in'}</button>
-            <button type="button" className="account-switch" disabled={busy} onClick={()=>void requestPhoneOtp()}>Resend OTP</button>
-          </form>}
-          <button type="button" className="account-switch" onClick={()=>{setAuthMethod('email');setPhoneOtpSent(false);setPhoneOtp('');setError('');setMessage('')}}>Use email and password instead</button>
-        </>}
-      </> : <>
-        <h1>My account.</h1>
+                <h1>My account.</h1>
         <p>Apni profile aur delivery addresses yahan manage karein.</p>
         <div className="account-email"><small>Signed in as</small><strong>{user.email || user.phone || 'Phone account'}</strong></div>
         <section className="account-notifications">
