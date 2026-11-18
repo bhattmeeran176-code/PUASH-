@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<defs>
+ <linearGradient id="cream" x2="0" y2="1"><stop stop-color="#fff9ed"/><stop offset="1" stop-color="#f4ead7"/></linearGradient>
+ <linearGradient id="bag" x2="1" y2="1"><stop stop-color="#08754f"/><stop offset="1" stop-color="#003d2b"/></linearGradient>
+</defs>
+<rect width="512" height="512" rx="112" fill="url(#cream)"/>
+<path d="M163 178V126c0-54 42-96 93-96s93 42 93 96v52" fill="none" stroke="#004b35" stroke-width="22" stroke-linecap="round"/>
+<path d="M88 163q5-25 34-25h268q29 0 34 25l35 257q5 39-35 39H86q-40 0-35-39z" fill="url(#bag)" stroke="#08704c" stroke-width="8"/>
+<path d="M143 253l70-63 36 22 52-54 69 85-72-42-47 32-38-17z" fill="#fff9ed"/>
+<path d="M163 274q92-24 184 0" fill="none" stroke="#e8bd36" stroke-width="6" opacity=".9"/>
+<path d="M319 190q-19-34 2-55 2 22 13 27-1-31 21-49-3 26 12 32 5-17 21-25-9 30 6 43-21 45-75 27z" fill="#e58a28"/>
+<path d="M145 293h220" stroke="#f7f1e5" stroke-width="2" opacity=".35"/>
+<text x="256" y="355" text-anchor="middle" font-family="Arial,sans-serif" font-size="78" font-weight="800" letter-spacing="-4" fill="#fff9ed">PUASH</text>
+<path d="M117 383h157" stroke="#e8bd36" stroke-width="8" stroke-linecap="round"/>
+<g transform="translate(282 368)" fill="none" stroke="#fff9ed" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+ <circle cx="34" cy="53" r="15"/><circle cx="112" cy="53" r="15"/>
+ <path d="M34 53l21-31h33l24 31H34l16-24m13-7 9-20h25l10 20"/>
+ <path d="M74 1l-8-13h-17"/>
+ <rect x="68" y="-9" width="27" height="22" rx="3" fill="#e8bd36" stroke="#e8bd36"/>
+</g>
+</svg>
