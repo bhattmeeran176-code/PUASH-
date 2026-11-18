@@ -1,18 +1,11 @@
 {
   "name": "PUASH — Good finds. Good feeling.",
   "short_name": "PUASH",
-  "description": "Thoughtful finds for your everyday life, rooted in Kashmir.",
+  "description": "Fast, thoughtful delivery from PUASH.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f3f5ed",
   "theme_color": "#173c31",
-  "icons": [
-    {
-      "src": "./puash-logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
-  ]
+  "icons": [{"src":"./puash-logo.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
 }
