@@ -322,6 +322,8 @@ export default function Account() {
       setPhoneOtp('');
       setPhoneOtpSent(true);
       setMessage('OTP SMS ke through bhej diya gaya hai. Apna 6-digit code enter karein.');
+      // Play a short in-app confirmation tone after the OTP request succeeds.
+      playNotificationSound(true);
     }
   };
 
@@ -339,7 +341,10 @@ export default function Account() {
     });
     setBusy(false);
     if (verifyError) setError('OTP verify nahi hua: ' + verifyError.message);
-    else setMessage('Phone number verify ho gaya. PUASH mein welcome!');
+    else {
+      setMessage('Phone number verify ho gaya. PUASH mein welcome!');
+      playNotificationSound(true);
+    }
   };
 
   const authenticate = async (event: FormEvent) => {
