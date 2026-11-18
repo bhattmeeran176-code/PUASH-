@@ -50,13 +50,6 @@ const blankAddress = {
 export default function Account() {
   const [user, setUser] = useState<any>(null);
   const [ready, setReady] = useState(false);
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [phoneOtp, setPhoneOtp] = useState('');
-  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
   const [fullName, setFullName] = useState('');
   const [savedName, setSavedName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -301,51 +294,6 @@ export default function Account() {
     }
   };
 
-  const requestPhoneOtp = async () => {
-    const rawPhone = phoneNumber.trim();
-    const digits = rawPhone.replace(/\D/g, '');
-    const normalizedPhone = rawPhone.startsWith('+') ? '+' + digits : digits.length === 10 ? '+91' + digits : '';
-    if (!/^\+[1-9]\d{7,14}$/.test(normalizedPhone)) {
-      setError('Valid phone number enter karein, country code ke saath. India ke liye 10-digit number bhi chalega.');
-      return;
-    }
-    setBusy(true); setError(''); setMessage('');
-    const { error: otpError } = await supabase.auth.signInWithOtp({
-      phone: normalizedPhone,
-      options: { shouldCreateUser: true },
-    });
-    setBusy(false);
-    if (otpError) setError('OTP send nahi hua: ' + otpError.message);
-    else {
-      setPhoneNumber(normalizedPhone);
-      setPhoneOtp('');
-      setPhoneOtpSent(true);
-      setMessage('OTP SMS ke through bhej diya gaya hai. Apna 6-digit code enter karein.');
-      // Play a short in-app confirmation tone after the OTP request succeeds.
-      playNotificationSound(true);
-    }
-  };
-
-  const verifyPhoneOtp = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!/^\d{6}$/.test(phoneOtp.trim())) {
-      setError('6-digit OTP enter karein.');
-      return;
-    }
-    setBusy(true); setError(''); setMessage('');
-    const { error: verifyError } = await supabase.auth.verifyOtp({
-      phone: phoneNumber,
-      token: phoneOtp.trim(),
-      type: 'sms',
-    });
-    setBusy(false);
-    if (verifyError) setError('OTP verify nahi hua: ' + verifyError.message);
-    else {
-      setMessage('Phone number verify ho gaya. PUASH mein welcome!');
-      playNotificationSound(true);
-    }
-  };
-
   const signInWithGoogle = async () => {
     setBusy(true); setError(''); setMessage('');
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
@@ -356,20 +304,6 @@ export default function Account() {
       setBusy(false);
       setError('Google sign-in start nahi hua: ' + oauthError.message);
     }
-  };
-
-  const authenticate = async (event: FormEvent) => {
-    event.preventDefault(); setBusy(true); setError(''); setMessage('');
-    const result = mode === 'login'
-      ? await supabase.auth.signInWithPassword({ email: email.trim(), password })
-      : await supabase.auth.signUp({
-          email: email.trim(), password,
-          options: { data: { full_name: fullName.trim() }, emailRedirectTo: 'https://puash.pages.dev/account' }
-        });
-    setBusy(false);
-    if (result.error) setError(result.error.message);
-    else if (mode === 'signup' && !result.data.session) setMessage('Account ban gaya! Email confirmation link par tap karein, phir yahan sign in karein.');
-    else setMessage(mode === 'signup' ? 'Account create ho gaya.' : 'Welcome back!');
   };
 
   const saveProfile = async (event: FormEvent) => {
