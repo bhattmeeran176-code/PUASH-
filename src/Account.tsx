@@ -50,6 +50,9 @@ const blankAddress = {
 export default function Account() {
   const [user, setUser] = useState<any>(null);
   const [ready, setReady] = useState(false);
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [savedName, setSavedName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -294,15 +297,28 @@ export default function Account() {
     }
   };
 
-  const signInWithGoogle = async () => {
+  const authenticate = async (event: FormEvent) => {
+    event.preventDefault();
     setBusy(true); setError(''); setMessage('');
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin + '/account' },
-    });
-    if (oauthError) {
-      setBusy(false);
-      setError('Google sign-in start nahi hua: ' + oauthError.message);
+    const result = mode === 'login'
+      ? await supabase.auth.signInWithPassword({ email: email.trim(), password })
+      : await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            data: { full_name: fullName.trim() },
+            emailRedirectTo: window.location.origin + '/account',
+          },
+        });
+    setBusy(false);
+    if (result.error) {
+      setError(mode === 'login'
+        ? 'Sign in nahi hua: ' + result.error.message
+        : 'Account create nahi hua: ' + result.error.message);
+    } else if (mode === 'signup' && !result.data.session) {
+      setMessage('Account request receive ho gayi. Email confirmation link par tap karke phir sign in karein.');
+    } else {
+      setMessage(mode === 'signup' ? 'PUASH account create ho gaya.' : 'Welcome back!');
     }
   };
 
@@ -383,12 +399,18 @@ export default function Account() {
       <div className="account-brand">PUASH<span>.</span><small>YOUR ACCOUNT</small></div>
       <div className="account-icon">{user ? <UserRound size={26}/> : <ShieldCheck size={26}/>}</div>
       {!user ? <>
-        <h1>Welcome to PUASH.</h1>
-        <p>Google se sign in karke apna PUASH shopping account access karein.</p>
-        <button type="button" className="account-primary" disabled={busy} onClick={() => void signInWithGoogle()}>
-          {busy ? 'Connecting…' : 'Continue with Google'}
+        <h1>{mode === 'login' ? 'Welcome back.' : 'Create your account.'}</h1>
+        <p>{mode === 'login' ? 'Email aur password se apna PUASH shopping account access karein.' : 'PUASH par apna customer account banayein.'}</p>
+        <form className="account-form" onSubmit={authenticate}>
+          {mode === 'signup' && <label>Full name<input value={fullName} onChange={e=>setFullName(e.target.value)} autoComplete="name" required placeholder="Your name"/></label>}
+          <label>Email address<input type="email" value={email} onChange={e=>setEmail(e.target.value)} autoComplete="email" required placeholder="you@example.com"/></label>
+          <label>Password<input type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={8} required placeholder="At least 8 characters"/></label>
+          <button className="account-primary" disabled={busy}>{busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}</button>
+        </form>
+        <button type="button" className="account-switch" disabled={busy} onClick={()=>{setMode(mode === 'login' ? 'signup' : 'login');setError('');setMessage('');}}>
+          {mode === 'login' ? 'New to PUASH? Create an account' : 'Already have an account? Sign in'}
         </button>
-        <p className="account-auth-note">Google ke secure sign-in se login karein. First login par PUASH account automatically create ho jayega.</p>
+        <p className="account-auth-note">Google sign-in temporarily unavailable hai jab tak Supabase mein Google provider configure nahi hota. Aap email se login ya account create kar sakte hain.</p>
       </> : <>
                 <h1>My account.</h1>
         <p>Apni profile aur delivery addresses yahan manage karein.</p>
